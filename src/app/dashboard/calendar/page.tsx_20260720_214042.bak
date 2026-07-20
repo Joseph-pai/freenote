@@ -35,6 +35,7 @@ export default function CalendarPage() {
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [sharingEvent, setSharingEvent] = useState<CalendarEvent | null>(null);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [selectedDayEvents, setSelectedDayEvents] = useState<CalendarEvent[]>([]);
 
   const days = useMemo(() => buildCalendarDays(currentYear, currentMonth), [currentYear, currentMonth]);
 
@@ -54,8 +55,6 @@ export default function CalendarPage() {
     return map;
   }, [events]);
 
-  const selectedDayEvents = selectedDay ? (eventsByDay[selectedDay] ?? []) : [];
-
   const today = toDateKey(Date.now());
 
   const prevMonth = () => {
@@ -70,6 +69,7 @@ export default function CalendarPage() {
   const handleDayClick = (day: number) => {
     const key = `${currentYear}-${String(currentMonth + 1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
     setSelectedDay(key);
+    setSelectedDayEvents(eventsByDay[key] ?? []);
   };
 
   return (
