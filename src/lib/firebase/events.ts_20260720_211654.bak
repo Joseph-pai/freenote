@@ -11,52 +11,29 @@ export const subscribeToEvents = (userId: string) => {
   const { setEvents, setLoading } = useCalendarStore.getState();
   setLoading(true);
 
-  const ownedQ = query(
+  const q = query(
     collection(db, 'events'),
     where('userId', '==', userId),
-    where('deletedAt', '==', null)
+    where('deletedAt', '==', null),
+    orderBy('startDate', 'asc')
   );
 
-  const sharedQ = query(
-    collection(db, 'events'),
-    where('sharedUserIds', 'array-contains', userId),
-    where('deletedAt', '==', null)
-  );
-
-  let ownedEvents: CalendarEvent[] = [];
-  let sharedEvents: CalendarEvent[] = [];
-
-  const updateStore = async () => {
-    const map = new Map<string, CalendarEvent>();
-    ownedEvents.forEach(e => map.set(e.id, e));
-    sharedEvents.forEach(e => map.set(e.id, e));
-    
-    const all = Array.from(map.values()).sort((a, b) => a.startDate - b.startDate);
-    setEvents(all);
-    for (const ev of all) {
-      await idbPutEvent(ev);
+  const unsubscribe = onSnapshot(
+    q,
+    async (snapshot) => {
+      const events = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as CalendarEvent));
+      setEvents(events);
+      for (const ev of events) await idbPutEvent(ev);
+      setLoading(false);
+    },
+    async () => {
+      const cached = await idbGetAllEvents(userId);
+      setEvents(cached);
+      setLoading(false);
     }
-  };
+  );
 
-  const unsubOwned = onSnapshot(ownedQ, (snapshot) => {
-    ownedEvents = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as CalendarEvent));
-    updateStore();
-    setLoading(false);
-  }, async () => {
-    const cached = await idbGetAllEvents(userId);
-    setEvents(cached);
-    setLoading(false);
-  });
-
-  const unsubShared = onSnapshot(sharedQ, (snapshot) => {
-    sharedEvents = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as CalendarEvent));
-    updateStore();
-  });
-
-  return () => {
-    unsubOwned();
-    unsubShared();
-  };
+  return unsubscribe;
 };
 
 export const createEvent = async (

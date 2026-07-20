@@ -18,10 +18,7 @@ export const useNoteStore = create<NoteState>((set) => ({
   loading: false,
   activeNoteId: null,
   setNotes: (notes) => set({ notes }),
-  addNote: (note) => set((state) => {
-    if (state.notes.some(n => n.id === note.id)) return state;
-    return { notes: [note, ...state.notes] };
-  }),
+  addNote: (note) => set((state) => ({ notes: [note, ...state.notes] })),
   updateNote: (id, updates) =>
     set((state) => ({
       notes: state.notes.map((n) => (n.id === id ? { ...n, ...updates } : n)),
