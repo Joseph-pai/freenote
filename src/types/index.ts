@@ -49,3 +49,18 @@ export interface Note {
   updatedAt: number;
   deletedAt: number | null;
 }
+
+export interface CalendarEvent {
+  id: string;
+  userId: string;
+  title: string;
+  description: string;
+  startDate: number;    // Unix timestamp (day precision)
+  endDate: number;      // Unix timestamp
+  allDay: boolean;
+  color: string;        // hex color
+  sharedWith: Record<string, 'view' | 'edit'>;
+  createdAt: number;
+  updatedAt: number;
+  deletedAt: number | null;
+}
