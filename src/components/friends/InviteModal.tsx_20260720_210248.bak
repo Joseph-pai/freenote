@@ -39,7 +39,7 @@ export function InviteModal({ onClose }: InviteModalProps) {
     setSuccess('');
     try {
       await useInviteCode(inviteCode.trim(), user.uid, user.nickname || '未知用戶', user.avatarUrl);
-      setSuccess('加入成功！對方已新增至您的好友列表。');
+      setSuccess('邀請已發送，等待對方同意！');
       setInviteCode('');
     } catch (err: any) {
       setError(err.message);
@@ -84,7 +84,7 @@ export function InviteModal({ onClose }: InviteModalProps) {
                 <div style={{ padding: '1rem', background: 'var(--background)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', fontSize: '1.5rem', fontWeight: 700, letterSpacing: '2px', color: 'var(--primary)' }}>
                   {generatedCode}
                 </div>
-                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>將此邀請碼發送給朋友，對方輸入後即可直接成為您的好友。</p>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>將此邀請碼發送給朋友，對方輸入後即可向您發送好友申請。</p>
               </div>
             ) : (
               <button onClick={handleGenerate} className="btn-primary" style={{ width: '100%', marginBottom: '0.5rem' }} disabled={loading}>
@@ -106,7 +106,7 @@ export function InviteModal({ onClose }: InviteModalProps) {
               />
             </div>
             <button type="submit" className="btn-primary" style={{ width: '100%' }} disabled={loading || !inviteCode}>
-              {loading ? '加入中...' : '加入好友'}
+              {loading ? '送出中...' : '發送好友邀請'}
             </button>
           </form>
         )}

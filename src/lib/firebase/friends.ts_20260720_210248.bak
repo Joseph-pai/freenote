@@ -43,13 +43,17 @@ export const useInviteCode = async (code: string, currentUserId: string, current
     }
   }
 
-  // Add each other to friends array
-  await updateDoc(doc(db, 'users', invite.creatorId), {
-    friends: arrayUnion(currentUserId)
-  });
-  await updateDoc(doc(db, 'users', currentUserId), {
-    friends: arrayUnion(invite.creatorId)
-  });
+  // Create friend request
+  const requestData: Omit<FriendRequest, 'id'> = {
+    fromUserId: currentUserId,
+    fromUserNickname: currentUserNickname,
+    fromUserAvatar: currentUserAvatar,
+    toUserId: invite.creatorId,
+    status: 'pending',
+    createdAt: Date.now(),
+  };
+  
+  await addDoc(collection(db, 'friendRequests'), requestData);
   
   // Mark code as used
   await updateDoc(doc(db, 'inviteCodes', invite.id), { usedBy: currentUserId });
