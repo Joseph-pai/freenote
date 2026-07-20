@@ -1,10 +1,11 @@
 import {
   collection, doc, addDoc, updateDoc, getDoc, getDocs,
-  onSnapshot, query, where, orderBy, limit, arrayUnion, arrayRemove
+  onSnapshot, query, where, limit, arrayUnion, arrayRemove, writeBatch
 } from 'firebase/firestore';
 import { db } from './config';
 import { InviteCode, FriendRequest, AppUser } from '../../types';
 import { useFriendStore } from '../../stores/friendStore';
+import { deleteConversation } from './messages';
 
 // Generate an 8-character invite code valid for 48 hours
 export const generateInviteCode = async (userId: string): Promise<InviteCode> => {
@@ -73,12 +74,28 @@ export const rejectFriendRequest = async (requestId: string) => {
 };
 
 export const removeFriend = async (myUserId: string, friendId: string) => {
+  // Remove from each other's friends list
   await updateDoc(doc(db, 'users', myUserId), {
     friends: arrayRemove(friendId)
   });
   await updateDoc(doc(db, 'users', friendId), {
     friends: arrayRemove(myUserId)
   });
+
+  // Find and delete shared conversation
+  try {
+    const q = query(
+      collection(db, 'conversations'),
+      where('participants', 'array-contains', myUserId)
+    );
+    const snap = await getDocs(q);
+    const conv = snap.docs.find(d => d.data().participants.includes(friendId));
+    if (conv) {
+      await deleteConversation(conv.id);
+    }
+  } catch (e) {
+    console.warn('Could not delete conversation:', e);
+  }
 };
 
 // Subscriptions

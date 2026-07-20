@@ -1,6 +1,6 @@
 import {
   collection, doc, addDoc, updateDoc, getDoc, getDocs,
-  onSnapshot, query, where, orderBy, limit, arrayUnion, writeBatch, serverTimestamp
+  onSnapshot, query, where, orderBy, limit, arrayUnion, writeBatch, deleteDoc
 } from 'firebase/firestore';
 import { db } from './config';
 import { Conversation, Message } from '../../types';
@@ -10,15 +10,19 @@ export const subscribeToConversations = (userId: string) => {
   const { setConversations, setLoading } = useMessageStore.getState();
   setLoading(true);
 
+  // No orderBy to avoid composite index requirement — sort client-side
   const q = query(
     collection(db, 'conversations'),
-    where('participants', 'array-contains', userId),
-    orderBy('lastMessageAt', 'desc')
+    where('participants', 'array-contains', userId)
   );
 
   return onSnapshot(q, (snapshot) => {
     const convos = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Conversation));
+    // Sort by lastMessageAt descending on the client side
+    convos.sort((a, b) => b.lastMessageAt - a.lastMessageAt);
     setConversations(convos);
+    setLoading(false);
+  }, () => {
     setLoading(false);
   });
 };
@@ -26,23 +30,26 @@ export const subscribeToConversations = (userId: string) => {
 export const subscribeToMessages = (conversationId: string) => {
   const { setMessages } = useMessageStore.getState();
 
+  // No orderBy to avoid composite index requirement — sort client-side
   const q = query(
     collection(db, 'messages'),
-    where('conversationId', '==', conversationId),
-    orderBy('createdAt', 'asc')
+    where('conversationId', '==', conversationId)
   );
 
   return onSnapshot(q, (snapshot) => {
     const msgs = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Message));
+    // Sort by createdAt ascending on the client side
+    msgs.sort((a, b) => a.createdAt - b.createdAt);
     setMessages(conversationId, msgs);
   });
 };
 
-export const sendMessage = async (conversationId: string, senderId: string, text: string) => {
+export const sendMessage = async (conversationId: string, senderId: string, senderNickname: string, text: string) => {
   const now = Date.now();
   const messageData: Omit<Message, 'id'> = {
     conversationId,
     senderId,
+    senderNickname,
     text,
     createdAt: now,
     readBy: [senderId],
@@ -61,6 +68,21 @@ export const sendMessage = async (conversationId: string, senderId: string, text
     lastMessageAt: now
   });
 
+  await batch.commit();
+};
+
+export const deleteMessage = async (messageId: string) => {
+  await deleteDoc(doc(db, 'messages', messageId));
+};
+
+export const deleteConversation = async (conversationId: string) => {
+  // Delete all messages in this conversation
+  const q = query(collection(db, 'messages'), where('conversationId', '==', conversationId));
+  const snap = await getDocs(q);
+  
+  const batch = writeBatch(db);
+  snap.docs.forEach(d => batch.delete(d.ref));
+  batch.delete(doc(db, 'conversations', conversationId));
   await batch.commit();
 };
 
