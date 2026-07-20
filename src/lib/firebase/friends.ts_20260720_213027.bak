@@ -88,12 +88,12 @@ export const subscribeToFriendRequests = (userId: string) => {
   const q = query(
     collection(db, 'friendRequests'),
     where('toUserId', '==', userId),
-    where('status', '==', 'pending')
+    where('status', '==', 'pending'),
+    orderBy('createdAt', 'desc')
   );
   
   return onSnapshot(q, (snapshot) => {
     const requests = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as FriendRequest));
-    requests.sort((a, b) => b.createdAt - a.createdAt);
     setFriendRequests(requests);
   });
 };
