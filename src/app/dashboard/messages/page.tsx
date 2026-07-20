@@ -232,9 +232,10 @@ function MessagesContent() {
                         {msg.senderNickname || '未知用戶'}
                       </p>
                     )}
-                    <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.5rem', flexDirection: isMe ? 'row-reverse' : 'row' }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.5rem', flexDirection: isMe ? 'row-reverse' : 'row', width: '100%', maxWidth: '75%', alignSelf: isMe ? 'flex-end' : 'flex-start' }}>
                       <div style={{
-                        maxWidth: '70%',
+                        maxWidth: '100%',
+                        minWidth: '60px',
                         background: isMe ? 'var(--primary)' : 'var(--surface)',
                         color: isMe ? '#fff' : 'var(--text-main)',
                         padding: '0.625rem 0.875rem',
@@ -243,6 +244,8 @@ function MessagesContent() {
                         borderBottomLeftRadius: isMe ? 'var(--radius-lg)' : '4px',
                         boxShadow: 'var(--shadow-sm)',
                         wordBreak: 'break-word',
+                        overflowWrap: 'break-word',
+                        whiteSpace: 'pre-wrap',
                       }}>
                         <p style={{ fontSize: '0.9375rem', lineHeight: 1.5 }}>{msg.text}</p>
                       </div>
