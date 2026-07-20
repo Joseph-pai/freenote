@@ -44,6 +44,7 @@ export function EventModal({ event, defaultDate, onClose }: EventModalProps) {
         endDate: new Date(endDate).getTime(),
         allDay: true,
         color,
+        sharedUserIds: event?.sharedUserIds ?? [],
         sharedWith: event?.sharedWith ?? {},
       };
       if (isEdit && event) {

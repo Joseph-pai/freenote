@@ -7,7 +7,8 @@ import { useNoteStore } from '../../../stores/noteStore';
 import { useAuthStore } from '../../../stores/authStore';
 import { createNote, updateNote, deleteNote } from '../../../lib/firebase/notes';
 import { NoteProvider } from '../../../components/notes/NoteProvider';
-import { Plus, Pin, PinOff, Trash2, Eye, Pencil, Search } from 'lucide-react';
+import { ShareModal } from '../../../components/shared/ShareModal';
+import { Plus, Pin, PinOff, Trash2, Eye, Pencil, Search, Users } from 'lucide-react';
 
 // ── Auto-save hook ──────────────────────────────────────────
 function useAutoSave(noteId: string | null, title: string, content: string) {
@@ -70,6 +71,7 @@ export default function NotesPage() {
   const [previewMode, setPreviewMode] = useState(false);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [sharingNote, setSharingNote] = useState<Note | null>(null);
 
   const activeNote = notes.find((n) => n.id === activeNoteId) ?? null;
 
@@ -88,7 +90,7 @@ export default function NotesPage() {
   const handleNewNote = useCallback(async () => {
     if (!user) return;
     const note = await createNote(user.uid, {
-      title: '', content: '', pinned: false, tags: [], sharedWith: {},
+      title: '', content: '', pinned: false, tags: [], sharedWith: {}, sharedUserIds: [],
     });
     setActiveNoteId(note.id);
   }, [user, setActiveNoteId]);
@@ -212,6 +214,9 @@ export default function NotesPage() {
                 <button onClick={handlePin} title={activeNote.pinned ? '取消置頂' : '置頂'} style={{ color: activeNote.pinned ? 'var(--primary)' : 'var(--text-muted)', padding: '4px 8px' }}>
                   {activeNote.pinned ? <PinOff size={17} /> : <Pin size={17} />}
                 </button>
+                <button onClick={() => setSharingNote(activeNote)} title="共用記事" style={{ color: 'var(--text-muted)', padding: '4px 8px' }}>
+                  <Users size={17} />
+                </button>
                 <div style={{ flex: 1 }} />
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>自動儲存中...</span>
                 <button onClick={handleDelete} title="刪除記事" style={{ color: 'var(--priority-high)', padding: '4px 8px' }}>
@@ -259,6 +264,17 @@ export default function NotesPage() {
           )}
         </div>
       </div>
+      {sharingNote && (
+        <ShareModal
+          itemId={sharingNote.id}
+          itemType="note"
+          currentSharedWith={sharingNote.sharedWith || {}}
+          onSave={async (newSharedWith, newSharedUserIds) => {
+            await updateNote(sharingNote.id, { sharedWith: newSharedWith, sharedUserIds: newSharedUserIds });
+          }}
+          onClose={() => setSharingNote(null)}
+        />
+      )}
     </NoteProvider>
   );
 }

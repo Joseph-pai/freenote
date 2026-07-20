@@ -40,33 +40,53 @@ export const subscribeToTasks = (userId: string) => {
   const { setTasks, setLoading } = useTaskStore.getState();
   setLoading(true);
 
-  const q = query(
+  const ownedQ = query(
     collection(db, 'tasks'),
     where('userId', '==', userId),
-    where('deletedAt', '==', null),
-    orderBy('createdAt', 'desc')
+    where('deletedAt', '==', null)
   );
 
-  const unsubscribe = onSnapshot(
-    q,
-    async (snapshot) => {
-      const tasks = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Task));
-      setTasks(tasks);
-      // Cache locally
-      for (const task of tasks) {
-        await idbPutTask(task);
-      }
-      setLoading(false);
-    },
-    async () => {
-      // On error (offline), load from IndexedDB
-      const cached = await idbGetAllTasks(userId);
-      setTasks(cached);
-      setLoading(false);
+  const sharedQ = query(
+    collection(db, 'tasks'),
+    where('sharedUserIds', 'array-contains', userId),
+    where('deletedAt', '==', null)
+  );
+
+  let ownedTasks: Task[] = [];
+  let sharedTasks: Task[] = [];
+
+  const updateStore = async () => {
+    // Deduplicate just in case
+    const map = new Map<string, Task>();
+    ownedTasks.forEach(t => map.set(t.id, t));
+    sharedTasks.forEach(t => map.set(t.id, t));
+    
+    const all = Array.from(map.values()).sort((a, b) => b.createdAt - a.createdAt);
+    setTasks(all);
+    for (const task of all) {
+      await idbPutTask(task);
     }
-  );
+  };
 
-  return unsubscribe;
+  const unsubOwned = onSnapshot(ownedQ, (snapshot) => {
+    ownedTasks = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Task));
+    updateStore();
+    setLoading(false);
+  }, async () => {
+    const cached = await idbGetAllTasks(userId);
+    setTasks(cached);
+    setLoading(false);
+  });
+
+  const unsubShared = onSnapshot(sharedQ, (snapshot) => {
+    sharedTasks = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Task));
+    updateStore();
+  });
+
+  return () => {
+    unsubOwned();
+    unsubShared();
+  };
 };
 
 // Create a task (handles offline gracefully)
@@ -78,6 +98,7 @@ export const createTask = async (
   const taskData: Omit<Task, 'id'> = {
     ...data,
     userId,
+    sharedUserIds: data.sharedUserIds ?? [],
     createdAt: now,
     updatedAt: now,
     deletedAt: null,

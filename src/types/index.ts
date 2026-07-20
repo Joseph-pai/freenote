@@ -22,6 +22,7 @@ export interface Task {
   dueDate: number | null;  // Unix timestamp
   tags: string[];
   listId: string | null;
+  sharedUserIds: string[]; // Array of UIDs for querying
   sharedWith: Record<string, 'view' | 'edit'>;
   createdAt: number;
   updatedAt: number;
@@ -45,6 +46,7 @@ export interface Note {
   content: string;       // Markdown
   pinned: boolean;
   tags: string[];
+  sharedUserIds: string[];
   sharedWith: Record<string, 'view' | 'edit'>;
   createdAt: number;
   updatedAt: number;
@@ -60,6 +62,7 @@ export interface CalendarEvent {
   endDate: number;      // Unix timestamp
   allDay: boolean;
   color: string;        // hex color
+  sharedUserIds: string[];
   sharedWith: Record<string, 'view' | 'edit'>;
   createdAt: number;
   updatedAt: number;

@@ -11,30 +11,54 @@ export const subscribeToNotes = (userId: string) => {
   const { setNotes, setLoading } = useNoteStore.getState();
   setLoading(true);
 
-  const q = query(
+  const ownedQ = query(
     collection(db, 'notes'),
     where('userId', '==', userId),
-    where('deletedAt', '==', null),
-    orderBy('pinned', 'desc'),
-    orderBy('updatedAt', 'desc')
+    where('deletedAt', '==', null)
   );
 
-  const unsubscribe = onSnapshot(
-    q,
-    async (snapshot) => {
-      const notes = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Note));
-      setNotes(notes);
-      for (const note of notes) await idbPutNote(note);
-      setLoading(false);
-    },
-    async () => {
-      const cached = await idbGetAllNotes(userId);
-      setNotes(cached);
-      setLoading(false);
-    }
+  const sharedQ = query(
+    collection(db, 'notes'),
+    where('sharedUserIds', 'array-contains', userId),
+    where('deletedAt', '==', null)
   );
 
-  return unsubscribe;
+  let ownedNotes: Note[] = [];
+  let sharedNotes: Note[] = [];
+
+  const updateStore = async () => {
+    const map = new Map<string, Note>();
+    ownedNotes.forEach(n => map.set(n.id, n));
+    sharedNotes.forEach(n => map.set(n.id, n));
+    
+    const all = Array.from(map.values()).sort((a, b) => {
+      if (a.pinned === b.pinned) return b.updatedAt - a.updatedAt;
+      return a.pinned ? -1 : 1;
+    });
+    
+    setNotes(all);
+    for (const note of all) await idbPutNote(note);
+  };
+
+  const unsubOwned = onSnapshot(ownedQ, (snapshot) => {
+    ownedNotes = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Note));
+    updateStore();
+    setLoading(false);
+  }, async () => {
+    const cached = await idbGetAllNotes(userId);
+    setNotes(cached);
+    setLoading(false);
+  });
+
+  const unsubShared = onSnapshot(sharedQ, (snapshot) => {
+    sharedNotes = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Note));
+    updateStore();
+  });
+
+  return () => {
+    unsubOwned();
+    unsubShared();
+  };
 };
 
 export const createNote = async (

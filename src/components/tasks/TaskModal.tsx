@@ -41,6 +41,7 @@ export function TaskModal({ task, onClose }: TaskModalProps) {
         completed: task?.completed ?? false,
         tags: task?.tags ?? [],
         listId: task?.listId ?? null,
+        sharedUserIds: task?.sharedUserIds ?? [],
         sharedWith: task?.sharedWith ?? {},
       };
       if (isEdit && task) {

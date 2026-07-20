@@ -5,7 +5,8 @@ import { useTaskStore } from '../../../stores/taskStore';
 import { updateTask } from '../../../lib/firebase/tasks';
 import { TaskProvider } from '../../../components/tasks/TaskProvider';
 import { TaskModal } from '../../../components/tasks/TaskModal';
-import { Plus, CheckCircle2, Circle, Calendar, Flag, Pencil } from 'lucide-react';
+import { ShareModal } from '../../../components/shared/ShareModal';
+import { Plus, CheckCircle2, Circle, Calendar, Flag, Pencil, Users } from 'lucide-react';
 
 const priorityColor: Record<string, string> = {
   high: 'var(--priority-high)',
@@ -18,7 +19,7 @@ const priorityLabel: Record<string, string> = {
   high: '高', medium: '中', low: '低', none: '—',
 };
 
-function TaskItem({ task, onEdit }: { task: Task; onEdit: (t: Task) => void }) {
+function TaskItem({ task, onEdit, onShare }: { task: Task; onEdit: (t: Task) => void; onShare: (t: Task) => void }) {
   const toggleComplete = () => updateTask(task.id, { completed: !task.completed });
   const dueLabel = task.dueDate
     ? new Date(task.dueDate).toLocaleDateString('zh-TW', { month: 'short', day: 'numeric' })
@@ -74,12 +75,11 @@ function TaskItem({ task, onEdit }: { task: Task; onEdit: (t: Task) => void }) {
         </div>
       </div>
 
-      <button
-        onClick={() => onEdit(task)}
-        style={{ flexShrink: 0, color: 'var(--text-muted)', padding: '4px' }}
-        aria-label="編輯任務"
-      >
+      <button onClick={() => onEdit(task)} style={{ flexShrink: 0, color: 'var(--text-muted)', padding: '4px' }} aria-label="編輯任務">
         <Pencil size={16} />
+      </button>
+      <button onClick={() => onShare(task)} style={{ flexShrink: 0, color: 'var(--text-muted)', padding: '4px' }} aria-label="共用任務">
+        <Users size={16} />
       </button>
     </div>
   );
@@ -89,6 +89,7 @@ export default function TasksPage() {
   const { tasks, loading } = useTaskStore();
   const [showModal, setShowModal] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [sharingTask, setSharingTask] = useState<Task | null>(null);
   const [filter, setFilter] = useState<'all' | 'active' | 'done'>('all');
 
   const filtered = tasks.filter((t) => {
@@ -158,6 +159,7 @@ export default function TasksPage() {
                 key={task.id}
                 task={task}
                 onEdit={(t) => { setEditingTask(t); setShowModal(true); }}
+                onShare={(t) => setSharingTask(t)}
               />
             ))}
           </div>
@@ -168,6 +170,17 @@ export default function TasksPage() {
         <TaskModal
           task={editingTask}
           onClose={() => { setShowModal(false); setEditingTask(null); }}
+        />
+      )}
+      {sharingTask && (
+        <ShareModal
+          itemId={sharingTask.id}
+          itemType="task"
+          currentSharedWith={sharingTask.sharedWith || {}}
+          onSave={async (newSharedWith, newSharedUserIds) => {
+            await updateTask(sharingTask.id, { sharedWith: newSharedWith, sharedUserIds: newSharedUserIds });
+          }}
+          onClose={() => setSharingTask(null)}
         />
       )}
     </TaskProvider>
