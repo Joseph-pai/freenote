@@ -60,8 +60,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       >
         {/* Logo */}
         <div style={{ padding: '0 1.25rem', marginBottom: '1.5rem' }}>
-          <h1 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--primary)', letterSpacing: '-0.5px', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-            FreeNote <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', background: 'var(--border)', padding: '2px 6px', borderRadius: '4px' }}>v2.0</span>
+          <h1 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--primary)', letterSpacing: '-0.5px' }}>
+            FreeNote
           </h1>
         </div>
 

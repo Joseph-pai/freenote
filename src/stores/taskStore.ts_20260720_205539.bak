@@ -18,10 +18,7 @@ export const useTaskStore = create<TaskState>((set) => ({
   loading: false,
   activeListId: null,
   setTasks: (tasks) => set({ tasks }),
-  addTask: (task) => set((state) => {
-    if (state.tasks.some(t => t.id === task.id)) return state;
-    return { tasks: [task, ...state.tasks] };
-  }),
+  addTask: (task) => set((state) => ({ tasks: [task, ...state.tasks] })),
   updateTask: (id, updates) =>
     set((state) => ({
       tasks: state.tasks.map((t) => (t.id === id ? { ...t, ...updates } : t)),
