@@ -3,6 +3,7 @@ export interface AppUser {
   email: string;
   nickname: string;
   avatarUrl: string | null;
+  friends: string[]; // Array of friend UIDs
   language: 'zh-TW' | 'en' | 'ja' | 'ko';
   theme: 'light' | 'dark' | 'system';
   createdAt: number;
@@ -63,4 +64,23 @@ export interface CalendarEvent {
   createdAt: number;
   updatedAt: number;
   deletedAt: number | null;
+}
+
+export interface InviteCode {
+  id: string;
+  code: string;
+  creatorId: string;
+  expiresAt: number;
+  usedBy: string | null;
+  createdAt: number;
+}
+
+export interface FriendRequest {
+  id: string;
+  fromUserId: string;
+  fromUserNickname: string;
+  fromUserAvatar: string | null;
+  toUserId: string;
+  status: 'pending' | 'accepted' | 'rejected';
+  createdAt: number;
 }

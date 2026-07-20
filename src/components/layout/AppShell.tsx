@@ -14,6 +14,7 @@ const navItems = [
   { href: '/dashboard/tasks', label: '任務', icon: CheckSquare },
   { href: '/dashboard/notes', label: '記事', icon: BookOpen },
   { href: '/dashboard/calendar', label: '日曆', icon: Calendar },
+  { href: '/dashboard/friends', label: '好友', icon: User },
   { href: '/dashboard/messages', label: '私訊', icon: MessageCircle },
 ];
 
