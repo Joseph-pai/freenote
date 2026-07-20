@@ -16,6 +16,12 @@ export const getDB = () => {
           taskStore.createIndex('userId', 'userId');
           taskStore.createIndex('updatedAt', 'updatedAt');
         }
+        // Store notes locally
+        if (!db.objectStoreNames.contains('notes')) {
+          const noteStore = db.createObjectStore('notes', { keyPath: 'id' });
+          noteStore.createIndex('userId', 'userId');
+          noteStore.createIndex('updatedAt', 'updatedAt');
+        }
         // Queue for offline operations
         if (!db.objectStoreNames.contains('syncQueue')) {
           const syncStore = db.createObjectStore('syncQueue', { keyPath: 'id' });
@@ -42,6 +48,23 @@ export const idbPutTask = async (task: any) => {
 export const idbDeleteTask = async (id: string) => {
   const db = await getDB();
   await db.delete('tasks', id);
+};
+
+// Notes
+export const idbGetAllNotes = async (userId: string) => {
+  const db = await getDB();
+  const all = await db.getAllFromIndex('notes', 'userId', userId);
+  return all.filter((n) => !n.deletedAt);
+};
+
+export const idbPutNote = async (note: any) => {
+  const db = await getDB();
+  await db.put('notes', note);
+};
+
+export const idbDeleteNote = async (id: string) => {
+  const db = await getDB();
+  await db.delete('notes', id);
 };
 
 // Sync Queue

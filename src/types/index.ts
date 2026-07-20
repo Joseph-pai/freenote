@@ -36,3 +36,16 @@ export interface SyncQueueItem {
   timestamp: number;
   retryCount: number;
 }
+
+export interface Note {
+  id: string;
+  userId: string;
+  title: string;
+  content: string;       // Markdown
+  pinned: boolean;
+  tags: string[];
+  sharedWith: Record<string, 'view' | 'edit'>;
+  createdAt: number;
+  updatedAt: number;
+  deletedAt: number | null;
+}
