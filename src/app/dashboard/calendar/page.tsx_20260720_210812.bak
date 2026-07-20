@@ -3,11 +3,9 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useAuthStore } from '../../../stores/authStore';
 import { useCalendarStore } from '../../../stores/calendarStore';
 import { CalendarEvent } from '../../../types';
-import { updateEvent } from '../../../lib/firebase/events';
 import { EventModal } from '../../../components/calendar/EventModal';
-import { ShareModal } from '../../../components/shared/ShareModal';
 import { CalendarProvider } from '../../../components/calendar/CalendarProvider';
-import { ChevronLeft, ChevronRight, Plus, Users, Pencil } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
 const MONTH_NAMES = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
@@ -33,7 +31,6 @@ export default function CalendarPage() {
 
   const [showModal, setShowModal] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
-  const [sharingEvent, setSharingEvent] = useState<CalendarEvent | null>(null);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [selectedDayEvents, setSelectedDayEvents] = useState<CalendarEvent[]>([]);
 
@@ -189,24 +186,19 @@ export default function CalendarPage() {
           {selectedDayEvents.map((ev) => (
             <div
               key={ev.id}
+              onClick={() => { setEditingEvent(ev); setShowModal(true); }}
               style={{
                 display: 'flex', alignItems: 'center', gap: '0.75rem',
                 padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)',
                 border: '1px solid var(--border)', marginBottom: '0.5rem',
-                background: 'var(--surface)',
+                cursor: 'pointer', background: 'var(--surface)',
               }}
             >
               <div style={{ width: 10, height: 10, borderRadius: '50%', background: ev.color, flexShrink: 0 }} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontWeight: 600, fontSize: '0.9375rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ev.title}</p>
-                {ev.description && <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ev.description}</p>}
+              <div>
+                <p style={{ fontWeight: 600, fontSize: '0.9375rem' }}>{ev.title}</p>
+                {ev.description && <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>{ev.description}</p>}
               </div>
-              <button onClick={(e) => { e.stopPropagation(); setEditingEvent(ev); setShowModal(true); }} style={{ flexShrink: 0, color: 'var(--text-muted)', padding: '4px' }} aria-label="編輯事件">
-                <Pencil size={16} />
-              </button>
-              <button onClick={(e) => { e.stopPropagation(); setSharingEvent(ev); }} style={{ flexShrink: 0, color: 'var(--text-muted)', padding: '4px' }} aria-label="共用事件">
-                <Users size={16} />
-              </button>
             </div>
           ))}
         </div>
@@ -217,17 +209,6 @@ export default function CalendarPage() {
           event={editingEvent}
           defaultDate={selectedDay ?? undefined}
           onClose={() => { setShowModal(false); setEditingEvent(null); }}
-        />
-      )}
-      {sharingEvent && (
-        <ShareModal
-          itemId={sharingEvent.id}
-          itemType="event"
-          currentSharedWith={sharingEvent.sharedWith || {}}
-          onSave={async (newSharedWith, newSharedUserIds) => {
-            await updateEvent(sharingEvent.id, { sharedWith: newSharedWith, sharedUserIds: newSharedUserIds });
-          }}
-          onClose={() => setSharingEvent(null)}
         />
       )}
       </div>
