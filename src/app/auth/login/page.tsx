@@ -18,7 +18,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await loginWithEmail(email, password);
-      router.push('/dashboard');
+      router.push('/dashboard/calendar');
     } catch (err: any) {
       setError(err.message || '登入失敗，請檢查帳號密碼。');
     } finally {
@@ -30,7 +30,7 @@ export default function LoginPage() {
     setError('');
     try {
       await loginWithGoogle();
-      router.push('/dashboard');
+      router.push('/dashboard/calendar');
     } catch (err: any) {
       setError('Google 登入失敗。');
     }

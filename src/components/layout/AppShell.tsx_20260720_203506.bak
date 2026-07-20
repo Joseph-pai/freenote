@@ -13,9 +13,9 @@ import {
 } from 'lucide-react';
 
 const navItems = [
-  { href: '/dashboard/calendar', key: 'nav.calendar', icon: Calendar },
   { href: '/dashboard/tasks', key: 'nav.tasks', icon: CheckSquare },
   { href: '/dashboard/notes', key: 'nav.notes', icon: BookOpen },
+  { href: '/dashboard/calendar', key: 'nav.calendar', icon: Calendar },
   { href: '/dashboard/friends', key: 'nav.friends', icon: User },
   { href: '/dashboard/messages', key: 'nav.messages', icon: MessageSquare },
 ];

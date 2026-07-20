@@ -2,26 +2,25 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { registerWithEmail, loginWithGoogle } from '../../../lib/firebase/auth';
-import { UserPlus } from 'lucide-react';
+import { loginWithEmail, loginWithGoogle } from '../../../lib/firebase/auth';
+import { LogIn } from 'lucide-react';
 
-export default function RegisterPage() {
-  const [nickname, setNickname] = useState('');
+export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const handleRegister = async (e: React.FormEvent) => {
+  const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
-      await registerWithEmail(email, password, nickname);
-      router.push('/dashboard/calendar');
+      await loginWithEmail(email, password);
+      router.push('/dashboard');
     } catch (err: any) {
-      setError(err.message || '註冊失敗，請稍後再試。');
+      setError(err.message || '登入失敗，請檢查帳號密碼。');
     } finally {
       setLoading(false);
     }
@@ -31,31 +30,20 @@ export default function RegisterPage() {
     setError('');
     try {
       await loginWithGoogle();
-      router.push('/dashboard/calendar');
+      router.push('/dashboard');
     } catch (err: any) {
-      setError('Google 註冊/登入失敗。');
+      setError('Google 登入失敗。');
     }
   };
 
   return (
     <div className="card">
       <div className="text-center mb-4">
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>建立新帳號</h1>
-        <p className="text-sm mt-4" style={{ color: 'var(--text-muted)' }}>加入 FreeNote 提升您的生產力</p>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>歡迎回來 FreeNote</h1>
+        <p className="text-sm mt-4" style={{ color: 'var(--text-muted)' }}>登入以繼續管理您的工作與記事</p>
       </div>
 
-      <form onSubmit={handleRegister}>
-        <div className="input-group">
-          <label htmlFor="nickname">暱稱 Nickname</label>
-          <input 
-            id="nickname" 
-            type="text" 
-            required 
-            value={nickname}
-            onChange={(e) => setNickname(e.target.value)}
-            placeholder="您的名字或暱稱" 
-          />
-        </div>
+      <form onSubmit={handleEmailLogin}>
         <div className="input-group">
           <label htmlFor="email">電子郵件 Email</label>
           <input 
@@ -73,18 +61,17 @@ export default function RegisterPage() {
             id="password" 
             type="password" 
             required 
-            minLength={6}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="至少 6 個字元" 
+            placeholder="••••••••" 
           />
         </div>
 
         {error && <div className="form-error mb-4">{error}</div>}
 
         <button type="submit" className="btn-primary mb-4" disabled={loading}>
-          <UserPlus size={20} />
-          {loading ? '註冊中...' : '註冊'}
+          <LogIn size={20} />
+          {loading ? '登入中...' : '登入'}
         </button>
       </form>
 
@@ -95,13 +82,13 @@ export default function RegisterPage() {
       </div>
 
       <button type="button" className="btn-outline mb-4" onClick={handleGoogleLogin}>
-        使用 Google 帳號註冊
+        使用 Google 帳號登入
       </button>
 
       <div className="text-center text-sm">
-        <span style={{ color: 'var(--text-muted)' }}>已經有帳號了？ </span>
-        <Link href="/auth/login" className="text-primary" style={{ fontWeight: 500 }}>
-          立即登入
+        <span style={{ color: 'var(--text-muted)' }}>還沒有帳號？ </span>
+        <Link href="/auth/register" className="text-primary" style={{ fontWeight: 500 }}>
+          立即註冊
         </Link>
       </div>
     </div>
