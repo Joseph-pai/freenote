@@ -127,3 +127,18 @@ export const resetPassword = async (email: string) => {
     throw error;
   }
 };
+
+export const updateUserProfile = async (uid: string, updates: Partial<AppUser>) => {
+  try {
+    await setDoc(doc(db, 'users', uid), { ...updates, updatedAt: Date.now() }, { merge: true });
+    // Update local state
+    const { user, setUser } = useAuthStore.getState();
+    if (user && user.uid === uid) {
+      setUser({ ...user, ...updates, updatedAt: Date.now() });
+    }
+  } catch (error) {
+    console.error("Update profile error:", error);
+    throw error;
+  }
+};
+

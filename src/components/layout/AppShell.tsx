@@ -5,23 +5,40 @@ import { usePathname } from 'next/navigation';
 import { useAuthStore } from '../../stores/authStore';
 import { logout } from '../../lib/firebase/auth';
 import { useRouter } from 'next/navigation';
+import { useTranslation } from '../../lib/i18n';
+import { SettingsModal } from './SettingsModal';
 import {
   CheckSquare, BookOpen, Calendar, MessageCircle,
-  LogOut, User, MessageSquare,
+  LogOut, User, MessageSquare, Settings
 } from 'lucide-react';
 
 const navItems = [
-  { href: '/dashboard/tasks', label: '任務', icon: CheckSquare },
-  { href: '/dashboard/notes', label: '記事', icon: BookOpen },
-  { href: '/dashboard/calendar', label: '日曆', icon: Calendar },
-  { href: '/dashboard/friends', label: '好友', icon: User },
-  { href: '/dashboard/messages', label: '私訊', icon: MessageSquare },
+  { href: '/dashboard/tasks', key: 'nav.tasks', icon: CheckSquare },
+  { href: '/dashboard/notes', key: 'nav.notes', icon: BookOpen },
+  { href: '/dashboard/calendar', key: 'nav.calendar', icon: Calendar },
+  { href: '/dashboard/friends', key: 'nav.friends', icon: User },
+  { href: '/dashboard/messages', key: 'nav.messages', icon: MessageSquare },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { user } = useAuthStore();
   const pathname = usePathname();
   const router = useRouter();
+  const { t } = useTranslation();
+  const [showSettings, setShowSettings] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!user) return;
+    const isDark =
+      user.theme === 'dark' ||
+      (user.theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [user?.theme]);
 
   const handleLogout = async () => {
     await logout();
@@ -50,7 +67,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         {/* Nav links */}
         <nav style={{ flex: 1 }}>
-          {navItems.map(({ href, label, icon: Icon }) => {
+          {navItems.map(({ href, key, icon: Icon }) => {
             const active = pathname.startsWith(href);
             return (
               <Link key={href} href={href} style={{
@@ -63,7 +80,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 transition: 'all 0.15s ease',
               }}>
                 <Icon size={18} />
-                {label}
+                {t(key)}
               </Link>
             );
           })}
@@ -89,12 +106,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </div>
           </div>
           <button
+            onClick={() => setShowSettings(true)}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem',
+              fontSize: '0.875rem', color: 'var(--text-muted)', width: '100%', marginBottom: '0.5rem' }}
+          >
+            <Settings size={16} /> {t('nav.settings')}
+          </button>
+          <button
             id="logout-btn"
             onClick={handleLogout}
             style={{ display: 'flex', alignItems: 'center', gap: '0.5rem',
               fontSize: '0.875rem', color: 'var(--text-muted)', width: '100%' }}
           >
-            <LogOut size={16} /> 登出
+            <LogOut size={16} /> {t('nav.logout')}
           </button>
         </div>
       </aside>
@@ -114,7 +138,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       }}
         className="mobile-bottom-nav"
       >
-        {navItems.map(({ href, label, icon: Icon }) => {
+        {navItems.map(({ href, key, icon: Icon }) => {
           const active = pathname.startsWith(href);
           return (
             <Link key={href} href={href} style={{
@@ -124,11 +148,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               fontSize: '0.6875rem', fontWeight: active ? 600 : 400,
             }}>
               <Icon size={22} />
-              {label}
+              {t(key)}
             </Link>
           );
         })}
       </nav>
+
+      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
     </div>
   );
 }
