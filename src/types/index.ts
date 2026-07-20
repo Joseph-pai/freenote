@@ -87,3 +87,23 @@ export interface FriendRequest {
   status: 'pending' | 'accepted' | 'rejected';
   createdAt: number;
 }
+
+export interface Conversation {
+  id: string;
+  participants: string[];    // [uid1, uid2]
+  participantNicknames: Record<string, string>;
+  participantAvatars: Record<string, string | null>;
+  lastMessage: string;
+  lastMessageAt: number;
+  createdAt: number;
+}
+
+export interface Message {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  text: string;
+  createdAt: number;
+  readBy: string[];
+}
+

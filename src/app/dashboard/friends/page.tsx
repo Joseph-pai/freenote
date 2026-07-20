@@ -1,16 +1,20 @@
 'use client';
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuthStore } from '../../../stores/authStore';
 import { useFriendStore } from '../../../stores/friendStore';
 import { acceptFriendRequest, rejectFriendRequest, removeFriend } from '../../../lib/firebase/friends';
+import { getOrCreateConversation } from '../../../lib/firebase/messages';
 import { FriendProvider } from '../../../components/friends/FriendProvider';
 import { InviteModal } from '../../../components/friends/InviteModal';
-import { UserPlus, UserCheck, UserX, UserMinus } from 'lucide-react';
+import { UserPlus, UserCheck, UserX, UserMinus, MessageSquare } from 'lucide-react';
 
 export default function FriendsPage() {
+  const router = useRouter();
   const { user } = useAuthStore();
   const { friends, friendRequests, loading } = useFriendStore();
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [messagingFriendId, setMessagingFriendId] = useState<string | null>(null);
 
   const handleAccept = async (request: any) => {
     try {
@@ -34,6 +38,22 @@ export default function FriendsPage() {
       await removeFriend(user.uid, friendId);
     } catch (err: any) {
       alert('刪除失敗: ' + err.message);
+    }
+  };
+
+  const handleMessage = async (friend: any) => {
+    if (!user) return;
+    setMessagingFriendId(friend.uid);
+    try {
+      await getOrCreateConversation(
+        user.uid, user.nickname || '用戶', user.avatarUrl || null,
+        friend.uid, friend.nickname, friend.avatarUrl || null
+      );
+      router.push('/dashboard/messages');
+    } catch (err: any) {
+      alert('建立聊天失敗: ' + err.message);
+    } finally {
+      setMessagingFriendId(null);
     }
   };
 
@@ -106,9 +126,19 @@ export default function FriendsPage() {
                       <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{friend.email}</p>
                     </div>
                   </div>
-                  <button onClick={() => handleRemoveFriend(friend.uid)} title="解除好友" style={{ color: 'var(--text-muted)', padding: '0.5rem' }}>
-                    <UserMinus size={18} />
-                  </button>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button 
+                      onClick={() => handleMessage(friend)} 
+                      title="發送訊息" 
+                      style={{ color: 'var(--primary)', padding: '0.5rem', background: 'transparent', border: 'none' }}
+                      disabled={messagingFriendId === friend.uid}
+                    >
+                      <MessageSquare size={18} />
+                    </button>
+                    <button onClick={() => handleRemoveFriend(friend.uid)} title="解除好友" style={{ color: 'var(--text-muted)', padding: '0.5rem', background: 'transparent', border: 'none' }}>
+                      <UserMinus size={18} />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

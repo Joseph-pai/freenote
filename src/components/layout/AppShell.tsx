@@ -7,7 +7,7 @@ import { logout } from '../../lib/firebase/auth';
 import { useRouter } from 'next/navigation';
 import {
   CheckSquare, BookOpen, Calendar, MessageCircle,
-  LogOut, User,
+  LogOut, User, MessageSquare,
 } from 'lucide-react';
 
 const navItems = [
@@ -15,7 +15,7 @@ const navItems = [
   { href: '/dashboard/notes', label: '記事', icon: BookOpen },
   { href: '/dashboard/calendar', label: '日曆', icon: Calendar },
   { href: '/dashboard/friends', label: '好友', icon: User },
-  { href: '/dashboard/messages', label: '私訊', icon: MessageCircle },
+  { href: '/dashboard/messages', label: '私訊', icon: MessageSquare },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
