@@ -1,0 +1,24 @@
+/* ── Responsive layout ── */
+@media (min-width: 768px) {
+  .desktop-sidebar {
+    display: flex !important;
+  }
+  .mobile-bottom-nav {
+    display: none !important;
+  }
+  main {
+    padding-bottom: 1.5rem !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .desktop-sidebar {
+    display: none !important;
+  }
+  .mobile-bottom-nav {
+    display: flex !important;
+  }
+  main {
+    padding-bottom: calc(72px + env(safe-area-inset-bottom)) !important;
+  }
+}

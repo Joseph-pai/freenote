@@ -8,3 +8,31 @@ export interface AppUser {
   createdAt: number;
   updatedAt: number;
 }
+
+export type Priority = 'high' | 'medium' | 'low' | 'none';
+
+export interface Task {
+  id: string;
+  userId: string;
+  title: string;
+  description: string;
+  completed: boolean;
+  priority: Priority;
+  dueDate: number | null;  // Unix timestamp
+  tags: string[];
+  listId: string | null;
+  sharedWith: Record<string, 'view' | 'edit'>;
+  createdAt: number;
+  updatedAt: number;
+  deletedAt: number | null;
+}
+
+export interface SyncQueueItem {
+  id: string;
+  operation: 'create' | 'update' | 'delete';
+  collection: string;
+  docId: string;
+  data: Record<string, any>;
+  timestamp: number;
+  retryCount: number;
+}

@@ -1,5 +1,6 @@
 import React from 'react';
 import './globals.css';
+import './responsive.css';
 import AuthProvider from '../components/auth/AuthProvider';
 
 export const metadata = {
