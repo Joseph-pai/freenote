@@ -117,7 +117,7 @@ export default function TasksPage() {
     <TaskProvider>
       <div style={{ maxWidth: '640px', margin: '0 auto' }}>
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
             <h2 style={{ fontWeight: 700, fontSize: '1.25rem' }}>任務清單</h2>
             <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>

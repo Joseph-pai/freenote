@@ -77,8 +77,8 @@ export default function CalendarPage() {
       <div style={{ maxWidth: '800px', margin: '0 auto' }}>
 
         {/* ── Header ── */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
           <button onClick={prevMonth} style={{ padding: '6px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', color: 'var(--text-main)' }}>
             <ChevronLeft size={18} />
           </button>

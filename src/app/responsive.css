@@ -1,4 +1,11 @@
 /* ── Responsive layout ── */
+.mobile-only {
+  display: none !important;
+}
+.desktop-only {
+  display: flex !important;
+}
+
 @media (min-width: 768px) {
   .desktop-sidebar {
     display: flex !important;
@@ -20,5 +27,24 @@
   }
   main {
     padding-bottom: calc(72px + env(safe-area-inset-bottom)) !important;
+  }
+  .mobile-only {
+    display: flex !important;
+  }
+  .desktop-only {
+    display: none !important;
+  }
+
+  /* Split-pane layout toggles for mobile */
+  .layout-container.show-detail .list-panel {
+    display: none !important;
+  }
+  .layout-container.show-list .detail-panel {
+    display: none !important;
+  }
+  .list-panel, .detail-panel {
+    width: 100% !important;
+    max-width: 100% !important;
+    border-right: none !important;
   }
 }

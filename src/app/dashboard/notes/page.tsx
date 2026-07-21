@@ -8,7 +8,7 @@ import { useAuthStore } from '../../../stores/authStore';
 import { createNote, updateNote, deleteNote } from '../../../lib/firebase/notes';
 import { NoteProvider } from '../../../components/notes/NoteProvider';
 import { ShareModal } from '../../../components/shared/ShareModal';
-import { Plus, Pin, PinOff, Trash2, Eye, Pencil, Search, Users } from 'lucide-react';
+import { Plus, Pin, PinOff, Trash2, Eye, Pencil, Search, Users, ArrowLeft } from 'lucide-react';
 
 // ── Auto-save hook ──────────────────────────────────────────
 function useAutoSave(noteId: string | null, title: string, content: string) {
@@ -113,13 +113,13 @@ export default function NotesPage() {
 
   return (
     <NoteProvider>
-      <div style={{
+      <div className={`layout-container ${activeNoteId ? 'show-detail' : 'show-list'}`} style={{
         display: 'flex', height: '100%',
         margin: '-1.5rem', overflow: 'hidden',
       }}>
 
         {/* ── Note List Panel ── */}
-        <div style={{
+        <div className="list-panel" style={{
           width: '260px', flexShrink: 0,
           borderRight: '1px solid var(--border)',
           display: 'flex', flexDirection: 'column',
@@ -181,7 +181,7 @@ export default function NotesPage() {
         </div>
 
         {/* ── Editor Panel ── */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div className="detail-panel" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           {!activeNote ? (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
               <div style={{ textAlign: 'center' }}>
@@ -195,8 +195,15 @@ export default function NotesPage() {
               <div style={{
                 display: 'flex', alignItems: 'center', gap: '0.5rem',
                 padding: '0.75rem 1.25rem', borderBottom: '1px solid var(--border)',
-                background: 'var(--surface)',
+                background: 'var(--surface)', flexWrap: 'wrap'
               }}>
+                <button 
+                  className="mobile-only"
+                  onClick={() => setActiveNoteId(null)}
+                  style={{ padding: '4px', marginRight: '4px', color: 'var(--text-muted)' }}
+                >
+                  <ArrowLeft size={20} />
+                </button>
                 <button
                   onClick={() => setPreviewMode(!previewMode)}
                   title={previewMode ? '切換編輯模式' : '切換預覽模式'}

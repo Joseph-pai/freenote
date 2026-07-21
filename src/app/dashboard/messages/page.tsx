@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuthStore } from '../../../stores/authStore';
 import { useMessageStore } from '../../../stores/messageStore';
 import { sendMessage, markMessagesAsRead, deleteMessage, subscribeToMessages } from '../../../lib/firebase/messages';
-import { Send, MessageSquare, Trash2 } from 'lucide-react';
+import { Send, MessageSquare, Trash2, ArrowLeft } from 'lucide-react';
 
 function ConversationItem({
   conversation,
@@ -148,10 +148,10 @@ function MessagesContent() {
   if (!user) return null;
 
   return (
-    <div style={{ display: 'flex', height: '100%', margin: '-1.5rem', overflow: 'hidden' }}>
+    <div className={`layout-container ${activeConversationId ? 'show-detail' : 'show-list'}`} style={{ display: 'flex', height: '100%', margin: '-1.5rem', overflow: 'hidden' }}>
       
       {/* ── Conversation List Panel ── */}
-      <div style={{
+      <div className="list-panel" style={{
         width: '280px', flexShrink: 0,
         borderRight: '1px solid var(--border)',
         display: 'flex', flexDirection: 'column',
@@ -192,7 +192,7 @@ function MessagesContent() {
       </div>
 
       {/* ── Chat Panel ── */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'var(--background)', overflow: 'hidden' }}>
+      <div className="detail-panel" style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'var(--background)', overflow: 'hidden' }}>
         {!activeConversationId ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
             <div style={{ textAlign: 'center' }}>
@@ -206,10 +206,22 @@ function MessagesContent() {
             {activeConversation && (() => {
               const otherId = activeConversation.participants.find(id => id !== user.uid) || '';
               const otherName = user.friendNicknames?.[otherId] || activeConversation.participantNicknames[otherId] || '未知用戶';
+              const otherAvatar = activeConversation.participantAvatars?.[otherId];
               return (
                 <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--border)', background: 'var(--surface)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '1rem' }}>
-                    {otherName.charAt(0).toUpperCase()}
+                  <button 
+                    className="mobile-only"
+                    onClick={() => setActiveConversationId(null)}
+                    style={{ padding: '4px', marginRight: '4px', color: 'var(--text-muted)' }}
+                  >
+                    <ArrowLeft size={20} />
+                  </button>
+                  <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '1rem', flexShrink: 0 }}>
+                    {otherAvatar ? (
+                      <img src={otherAvatar} alt={otherName} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                    ) : (
+                      otherName.charAt(0).toUpperCase()
+                    )}
                   </div>
                   <p style={{ fontWeight: 700, fontSize: '1rem' }}>{otherName}</p>
                 </div>
