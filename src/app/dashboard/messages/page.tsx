@@ -253,7 +253,7 @@ function MessagesContent() {
                         <p style={{ fontSize: '0.9375rem', lineHeight: 1.5 }}>{msg.text}</p>
                       </div>
                       {/* Delete button - visible on hover */}
-                      {hoveredMsgId === msg.id && isMe && (
+                      {hoveredMsgId === msg.id && (
                         <button
                           type="button"
                           onClick={() => handleDeleteMessage(msg.id)}
