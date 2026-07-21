@@ -1,0 +1,5 @@
+- `[x]` Backup all affected files
+- `[x]` Update `src/app/responsive.css` with new utility and layout classes
+- `[x]` Modify `src/app/dashboard/messages/page.tsx` for mobile single-pane toggle and back button
+- `[x]` Modify `src/app/dashboard/notes/page.tsx` for mobile single-pane toggle and back button
+- `[x]` Update flex headers in `friends`, `tasks`, and `calendar` pages with `flex-wrap`
