@@ -3,7 +3,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuthStore } from '../../../stores/authStore';
 import { useMessageStore } from '../../../stores/messageStore';
 import { sendMessage, markMessagesAsRead, deleteMessage, subscribeToMessages } from '../../../lib/firebase/messages';
-import { MessageProvider } from '../../../components/messages/MessageProvider';
 import { Send, MessageSquare, Trash2 } from 'lucide-react';
 
 function ConversationItem({
@@ -311,9 +310,5 @@ function MessagesContent() {
 }
 
 export default function MessagesPage() {
-  return (
-    <MessageProvider>
-      <MessagesContent />
-    </MessageProvider>
-  );
+  return <MessagesContent />;
 }

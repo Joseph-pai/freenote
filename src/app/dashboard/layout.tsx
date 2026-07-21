@@ -1,5 +1,6 @@
 import React from 'react';
 import { AppShell } from '../../components/layout/AppShell';
+import { GlobalMessageListener } from '../../components/messages/GlobalMessageListener';
 
 export default function DashboardLayout({
   children,
@@ -8,6 +9,7 @@ export default function DashboardLayout({
 }) {
   return (
     <AppShell>
+      <GlobalMessageListener />
       {children}
     </AppShell>
   );

@@ -1,0 +1,5 @@
+- `[x]` Backup files to be modified
+- `[x]` Create `GlobalMessageListener` component (handles subscriptions and renders toast)
+- `[x]` Move `MessageProvider` out of `MessagesPage` to avoid duplicate logic
+- `[x]` Mount `GlobalMessageListener` in `src/app/dashboard/layout.tsx` (or `AppShell.tsx`)
+- `[x]` Clean up `src/app/dashboard/messages/page.tsx`

@@ -6,11 +6,13 @@ interface MessageState {
   messages: Record<string, Message[]>; // keyed by conversationId
   activeConversationId: string | null;
   loading: boolean;
+  initialized: boolean;
   setConversations: (convos: Conversation[]) => void;
   setMessages: (conversationId: string, messages: Message[]) => void;
   addMessage: (conversationId: string, message: Message) => void;
   setActiveConversationId: (id: string | null) => void;
   setLoading: (loading: boolean) => void;
+  setInitialized: (init: boolean) => void;
 }
 
 export const useMessageStore = create<MessageState>((set) => ({
@@ -18,6 +20,7 @@ export const useMessageStore = create<MessageState>((set) => ({
   messages: {},
   activeConversationId: null,
   loading: false,
+  initialized: false,
   setConversations: (conversations) => set({ conversations }),
   setMessages: (conversationId, msgs) =>
     set((s) => ({ messages: { ...s.messages, [conversationId]: msgs } })),
@@ -30,4 +33,5 @@ export const useMessageStore = create<MessageState>((set) => ({
     })),
   setActiveConversationId: (id) => set({ activeConversationId: id }),
   setLoading: (loading) => set({ loading }),
+  setInitialized: (init) => set({ initialized: init }),
 }));

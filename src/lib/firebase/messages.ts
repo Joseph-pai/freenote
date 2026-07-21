@@ -7,8 +7,10 @@ import { Conversation, Message } from '../../types';
 import { useMessageStore } from '../../stores/messageStore';
 
 export const subscribeToConversations = (userId: string) => {
-  const { setConversations, setLoading } = useMessageStore.getState();
-  setLoading(true);
+  const { setConversations, setLoading, setInitialized, initialized } = useMessageStore.getState();
+  if (!initialized) {
+    setLoading(true);
+  }
 
   // No orderBy to avoid composite index requirement — sort client-side
   const q = query(
@@ -21,6 +23,9 @@ export const subscribeToConversations = (userId: string) => {
     // Sort by lastMessageAt descending on the client side
     convos.sort((a, b) => b.lastMessageAt - a.lastMessageAt);
     setConversations(convos);
+    if (!useMessageStore.getState().initialized) {
+      setInitialized(true);
+    }
     setLoading(false);
   }, () => {
     setLoading(false);

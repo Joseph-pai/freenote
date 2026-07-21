@@ -1,0 +1,6 @@
+- `[x]` Backup files to be modified
+- `[x]` Update `AppUser` interface in `src/types/index.ts`
+- `[x]` Add `updateFriendNickname` to `src/lib/firebase/friends.ts`
+- `[x]` Implement nickname editing in `src/app/dashboard/friends/page.tsx`
+- `[x]` Apply custom nickname in `src/app/dashboard/messages/page.tsx`
+- `[x]` Apply custom nickname in `src/components/shared/ShareModal.tsx`
