@@ -4,6 +4,7 @@ export interface AppUser {
   nickname: string;
   avatarUrl: string | null;
   friends: string[]; // Array of friend UIDs
+  friendNicknames?: Record<string, string>; // Optional custom nicknames for friends
   language: 'zh-TW' | 'en' | 'ja' | 'ko';
   theme: 'light' | 'dark' | 'system';
   createdAt: number;

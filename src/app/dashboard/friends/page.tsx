@@ -3,11 +3,11 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '../../../stores/authStore';
 import { useFriendStore } from '../../../stores/friendStore';
-import { acceptFriendRequest, rejectFriendRequest, removeFriend } from '../../../lib/firebase/friends';
+import { acceptFriendRequest, rejectFriendRequest, removeFriend, updateFriendNickname } from '../../../lib/firebase/friends';
 import { getOrCreateConversation } from '../../../lib/firebase/messages';
 import { FriendProvider } from '../../../components/friends/FriendProvider';
 import { InviteModal } from '../../../components/friends/InviteModal';
-import { UserPlus, UserCheck, UserX, UserMinus, MessageSquare } from 'lucide-react';
+import { UserPlus, UserCheck, UserX, UserMinus, MessageSquare, Edit2, Check, X } from 'lucide-react';
 
 export default function FriendsPage() {
   const router = useRouter();
@@ -15,6 +15,8 @@ export default function FriendsPage() {
   const { friends, friendRequests, loading } = useFriendStore();
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [messagingFriendId, setMessagingFriendId] = useState<string | null>(null);
+  const [editingNicknameId, setEditingNicknameId] = useState<string | null>(null);
+  const [tempNickname, setTempNickname] = useState('');
 
   const handleAccept = async (request: any) => {
     try {
@@ -54,6 +56,21 @@ export default function FriendsPage() {
       alert('建立聊天失敗: ' + err.message);
     } finally {
       setMessagingFriendId(null);
+    }
+  };
+
+  const handleStartEditNickname = (friend: any) => {
+    setEditingNicknameId(friend.uid);
+    setTempNickname(user?.friendNicknames?.[friend.uid] || friend.nickname);
+  };
+
+  const handleSaveNickname = async (friendId: string) => {
+    if (!user) return;
+    try {
+      await updateFriendNickname(user.uid, friendId, tempNickname);
+      setEditingNicknameId(null);
+    } catch (err: any) {
+      alert('儲存暱稱失敗: ' + err.message);
     }
   };
 
@@ -115,32 +132,65 @@ export default function FriendsPage() {
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
-              {friends.map(friend => (
+              {friends.map(friend => {
+                const displayNickname = user?.friendNicknames?.[friend.uid] || friend.nickname;
+                const isEditing = editingNicknameId === friend.uid;
+                
+                return (
                 <div key={friend.uid} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1.25rem', background: 'var(--surface)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                     <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--border)', overflow: 'hidden' }}>
                       {friend.avatarUrl ? <img src={friend.avatarUrl} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>{friend.nickname.charAt(0).toUpperCase()}</div>}
                     </div>
-                    <div>
-                      <p style={{ fontWeight: 600 }}>{friend.nickname}</p>
-                      <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{friend.email}</p>
-                    </div>
+                    {isEditing ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                        <input 
+                          type="text" 
+                          value={tempNickname} 
+                          onChange={(e) => setTempNickname(e.target.value)}
+                          placeholder={friend.nickname}
+                          style={{ padding: '0.25rem 0.5rem', borderRadius: '4px', border: '1px solid var(--border)', fontSize: '0.875rem' }}
+                          autoFocus
+                        />
+                        <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{friend.email}</p>
+                      </div>
+                    ) : (
+                      <div>
+                        <p style={{ fontWeight: 600 }}>
+                          {displayNickname}
+                          {user?.friendNicknames?.[friend.uid] && (
+                            <span style={{ marginLeft: '6px', fontSize: '0.7rem', color: 'var(--primary)', background: 'var(--primary-light)', padding: '2px 6px', borderRadius: '4px' }}>自訂</span>
+                          )}
+                        </p>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{friend.email}</p>
+                      </div>
+                    )}
                   </div>
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button 
-                      onClick={() => handleMessage(friend)} 
-                      title="發送訊息" 
-                      style={{ color: 'var(--primary)', padding: '0.5rem', background: 'transparent', border: 'none' }}
-                      disabled={messagingFriendId === friend.uid}
-                    >
-                      <MessageSquare size={18} />
-                    </button>
-                    <button onClick={() => handleRemoveFriend(friend.uid)} title="解除好友" style={{ color: 'var(--text-muted)', padding: '0.5rem', background: 'transparent', border: 'none' }}>
-                      <UserMinus size={18} />
-                    </button>
+                    {isEditing ? (
+                      <>
+                        <button onClick={() => handleSaveNickname(friend.uid)} title="儲存" style={{ color: 'var(--primary)', padding: '0.5rem', background: 'transparent', border: 'none' }}><Check size={18} /></button>
+                        <button onClick={() => setEditingNicknameId(null)} title="取消" style={{ color: 'var(--text-muted)', padding: '0.5rem', background: 'transparent', border: 'none' }}><X size={18} /></button>
+                      </>
+                    ) : (
+                      <>
+                        <button onClick={() => handleStartEditNickname(friend)} title="設定暱稱" style={{ color: 'var(--text-main)', padding: '0.5rem', background: 'transparent', border: 'none' }}><Edit2 size={18} /></button>
+                        <button 
+                          onClick={() => handleMessage(friend)} 
+                          title="發送訊息" 
+                          style={{ color: 'var(--primary)', padding: '0.5rem', background: 'transparent', border: 'none' }}
+                          disabled={messagingFriendId === friend.uid}
+                        >
+                          <MessageSquare size={18} />
+                        </button>
+                        <button onClick={() => handleRemoveFriend(friend.uid)} title="解除好友" style={{ color: 'var(--text-muted)', padding: '0.5rem', background: 'transparent', border: 'none' }}>
+                          <UserMinus size={18} />
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
-              ))}
+              )})}
             </div>
           )}
         </div>

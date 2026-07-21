@@ -11,16 +11,18 @@ function ConversationItem({
   active,
   onClick,
   currentUserId,
-  unreadCount
+  unreadCount,
+  userFriendNicknames
 }: {
   conversation: any;
   active: boolean;
   onClick: () => void;
   currentUserId: string;
   unreadCount: number;
+  userFriendNicknames?: Record<string, string>;
 }) {
   const otherUserId = conversation.participants.find((id: string) => id !== currentUserId) || currentUserId;
-  const otherNickname = conversation.participantNicknames[otherUserId] || '未知用戶';
+  const otherNickname = userFriendNicknames?.[otherUserId] || conversation.participantNicknames[otherUserId] || '未知用戶';
   const otherAvatar = conversation.participantAvatars[otherUserId];
 
   const date = conversation.lastMessageAt
@@ -182,6 +184,7 @@ function MessagesContent() {
                   onClick={() => setActiveConversationId(conv.id)}
                   currentUserId={user.uid}
                   unreadCount={unreadCount}
+                  userFriendNicknames={user.friendNicknames}
                 />
               );
             })
@@ -203,7 +206,7 @@ function MessagesContent() {
             {/* Chat Header */}
             {activeConversation && (() => {
               const otherId = activeConversation.participants.find(id => id !== user.uid) || '';
-              const otherName = activeConversation.participantNicknames[otherId] || '未知用戶';
+              const otherName = user.friendNicknames?.[otherId] || activeConversation.participantNicknames[otherId] || '未知用戶';
               return (
                 <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--border)', background: 'var(--surface)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                   <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '1rem' }}>
@@ -229,7 +232,7 @@ function MessagesContent() {
                   >
                     {showSender && (
                       <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '3px', paddingLeft: '4px' }}>
-                        {msg.senderNickname || '未知用戶'}
+                        {user.friendNicknames?.[msg.senderId] || msg.senderNickname || '未知用戶'}
                       </p>
                     )}
                     <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.5rem', flexDirection: isMe ? 'row-reverse' : 'row', width: '100%', maxWidth: '100%', alignSelf: isMe ? 'flex-end' : 'flex-start' }}>

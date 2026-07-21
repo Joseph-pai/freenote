@@ -98,6 +98,22 @@ export const removeFriend = async (myUserId: string, friendId: string) => {
   }
 };
 
+export const updateFriendNickname = async (myUserId: string, friendId: string, customNickname: string) => {
+  const userRef = doc(db, 'users', myUserId);
+  if (customNickname.trim() === '') {
+    // If empty, remove the custom nickname field for this friend by using deleteField()? 
+    // Or just set to empty string and handle it in UI.
+    // Let's set it to empty string so it's simple without importing deleteField.
+    await updateDoc(userRef, {
+      [`friendNicknames.${friendId}`]: ''
+    });
+  } else {
+    await updateDoc(userRef, {
+      [`friendNicknames.${friendId}`]: customNickname.trim()
+    });
+  }
+};
+
 // Subscriptions
 export const subscribeToFriendRequests = (userId: string) => {
   const { setFriendRequests } = useFriendStore.getState();

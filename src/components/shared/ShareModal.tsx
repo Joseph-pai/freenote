@@ -1,6 +1,7 @@
 'use client';
 import React, { useState } from 'react';
 import { useFriendStore } from '../../stores/friendStore';
+import { useAuthStore } from '../../stores/authStore';
 import { Users, X } from 'lucide-react';
 
 interface ShareModalProps {
@@ -12,6 +13,7 @@ interface ShareModalProps {
 }
 
 export function ShareModal({ itemId, itemType, currentSharedWith, onSave, onClose }: ShareModalProps) {
+  const { user } = useAuthStore();
   const { friends } = useFriendStore();
   const [shared, setShared] = useState<Record<string, 'view' | 'edit'>>(currentSharedWith || {});
   const [loading, setLoading] = useState(false);
@@ -65,12 +67,13 @@ export function ShareModal({ itemId, itemType, currentSharedWith, onSave, onClos
             {friends.map((friend) => {
               const isShared = !!shared[friend.uid];
               const role = shared[friend.uid];
+              const displayNickname = user?.friendNicknames?.[friend.uid] || friend.nickname;
               return (
                 <div key={friend.uid} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', marginBottom: '0.5rem', background: isShared ? 'rgba(37,99,235,0.06)' : 'transparent', transition: 'all 0.15s' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', flex: 1 }} onClick={() => handleToggleFriend(friend.uid)}>
                     <input type="checkbox" checked={isShared} onChange={() => handleToggleFriend(friend.uid)} style={{ cursor: 'pointer' }} onClick={(e) => e.stopPropagation()} />
                     <div>
-                      <p style={{ fontWeight: 600, fontSize: '0.9375rem', color: isShared ? 'var(--primary)' : 'var(--text-main)' }}>{friend.nickname}</p>
+                      <p style={{ fontWeight: 600, fontSize: '0.9375rem', color: isShared ? 'var(--primary)' : 'var(--text-main)' }}>{displayNickname}</p>
                       <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{friend.email}</p>
                     </div>
                   </div>
