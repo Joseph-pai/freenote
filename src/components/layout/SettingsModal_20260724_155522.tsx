@@ -25,7 +25,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
       await updateUserProfile(user.uid, { theme, language });
       onClose();
     } catch (err: any) {
-      alert(t('common.saveFailed') + ': ' + err.message);
+      alert('儲存失敗: ' + err.message);
     } finally {
       setSaving(false);
     }

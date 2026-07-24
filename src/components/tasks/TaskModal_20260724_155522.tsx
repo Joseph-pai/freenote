@@ -3,24 +3,22 @@ import React, { useState } from 'react';
 import { Task, Priority } from '../../types';
 import { createTask, updateTask, deleteTask } from '../../lib/firebase/tasks';
 import { useAuthStore } from '../../stores/authStore';
-import { useTranslation } from '../../lib/i18n';
 
 interface TaskModalProps {
   task?: Task | null;
   onClose: () => void;
 }
 
+const priorityOptions: { value: Priority; label: string; color: string }[] = [
+  { value: 'high', label: '🔴 高優先', color: 'var(--priority-high)' },
+  { value: 'medium', label: '🟡 中優先', color: 'var(--priority-medium)' },
+  { value: 'low', label: '🔵 低優先', color: 'var(--priority-low)' },
+  { value: 'none', label: '⚪ 無', color: 'var(--priority-none)' },
+];
+
 export function TaskModal({ task, onClose }: TaskModalProps) {
   const { user } = useAuthStore();
-  const { t } = useTranslation();
   const isEdit = !!task;
-
-  const priorityOptions: { value: Priority; label: string; color: string }[] = [
-    { value: 'high', label: t('tasks.priority.high'), color: 'var(--priority-high)' },
-    { value: 'medium', label: t('tasks.priority.medium'), color: 'var(--priority-medium)' },
-    { value: 'low', label: t('tasks.priority.low'), color: 'var(--priority-low)' },
-    { value: 'none', label: t('tasks.priority.none'), color: 'var(--priority-none)' },
-  ];
 
   const [title, setTitle] = useState(task?.title ?? '');
   const [description, setDescription] = useState(task?.description ?? '');
@@ -58,7 +56,7 @@ export function TaskModal({ task, onClose }: TaskModalProps) {
   };
 
   const handleDelete = async () => {
-    if (!task || !confirm(t('tasks.deleteConfirm'))) return;
+    if (!task || !confirm('確定要刪除這個任務嗎？')) return;
     await deleteTask(task.id);
     onClose();
   };
@@ -79,30 +77,30 @@ export function TaskModal({ task, onClose }: TaskModalProps) {
         }}
       >
         <h2 style={{ marginBottom: '1.25rem', fontWeight: 700, fontSize: '1.125rem' }}>
-          {isEdit ? t('tasks.editTask') : t('tasks.addTask')}
+          {isEdit ? '編輯任務' : '新增任務'}
         </h2>
 
         <form onSubmit={handleSubmit}>
           <div className="input-group">
-            <label htmlFor="task-title">{t('tasks.titleLabel')}</label>
+            <label htmlFor="task-title">任務標題 *</label>
             <input
               id="task-title"
               type="text"
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder={t('tasks.titlePlaceholder')}
+              placeholder="輸入任務標題..."
               autoFocus
             />
           </div>
 
           <div className="input-group">
-            <label htmlFor="task-desc">{t('tasks.descLabel')}</label>
+            <label htmlFor="task-desc">描述（選填）</label>
             <textarea
               id="task-desc"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder={t('tasks.descPlaceholder')}
+              placeholder="補充說明..."
               rows={3}
               style={{
                 padding: '0.75rem 1rem',
@@ -120,7 +118,7 @@ export function TaskModal({ task, onClose }: TaskModalProps) {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <div className="input-group">
-              <label htmlFor="task-priority">{t('tasks.priority')}</label>
+              <label htmlFor="task-priority">優先級</label>
               <select
                 id="task-priority"
                 value={priority}
@@ -142,7 +140,7 @@ export function TaskModal({ task, onClose }: TaskModalProps) {
             </div>
 
             <div className="input-group">
-              <label htmlFor="task-due">{t('tasks.due')}</label>
+              <label htmlFor="task-due">截止日期</label>
               <input
                 id="task-due"
                 type="date"
@@ -154,7 +152,7 @@ export function TaskModal({ task, onClose }: TaskModalProps) {
 
           <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
             <button type="submit" className="btn-primary" disabled={saving}>
-              {saving ? t('common.saving') : isEdit ? t('tasks.updateTask') : t('tasks.addTask')}
+              {saving ? '儲存中...' : isEdit ? '更新任務' : '新增任務'}
             </button>
             <button
               type="button"
@@ -169,7 +167,7 @@ export function TaskModal({ task, onClose }: TaskModalProps) {
                 flex: 1,
               }}
             >
-              {t('common.cancel')}
+              取消
             </button>
             {isEdit && (
               <button
@@ -184,7 +182,7 @@ export function TaskModal({ task, onClose }: TaskModalProps) {
                   fontWeight: 600,
                 }}
               >
-                {t('common.delete')}
+                刪除
               </button>
             )}
           </div>

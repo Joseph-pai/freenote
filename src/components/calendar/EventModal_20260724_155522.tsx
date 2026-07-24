@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import { CalendarEvent } from '../../types';
 import { createEvent, updateEvent, deleteEvent } from '../../lib/firebase/events';
 import { useAuthStore } from '../../stores/authStore';
-import { useTranslation } from '../../lib/i18n';
 
 interface EventModalProps {
   event?: CalendarEvent | null;
@@ -18,7 +17,6 @@ const COLOR_OPTIONS = [
 
 export function EventModal({ event, defaultDate, onClose }: EventModalProps) {
   const { user } = useAuthStore();
-  const { t } = useTranslation();
   const isEdit = !!event;
 
   const todayStr = defaultDate || new Date().toISOString().split('T')[0];
@@ -61,7 +59,7 @@ export function EventModal({ event, defaultDate, onClose }: EventModalProps) {
   };
 
   const handleDelete = async () => {
-    if (!event || !confirm(t('event.deleteConfirm'))) return;
+    if (!event || !confirm('確定刪除此事件？')) return;
     await deleteEvent(event.id);
     onClose();
   };
@@ -73,35 +71,35 @@ export function EventModal({ event, defaultDate, onClose }: EventModalProps) {
     >
       <div onClick={(e) => e.stopPropagation()} style={{ background: 'var(--surface)', borderRadius: 'var(--radius-lg)', padding: '1.5rem', width: '100%', maxWidth: '440px', boxShadow: 'var(--shadow-md)' }}>
         <h2 style={{ marginBottom: '1.25rem', fontWeight: 700, fontSize: '1.125rem' }}>
-          {isEdit ? t('calendar.editEvent') : t('calendar.addEvent')}
+          {isEdit ? '編輯事件' : '新增事件'}
         </h2>
         <form onSubmit={handleSubmit}>
           <div className="input-group">
-            <label htmlFor="event-title">{t('event.title')}</label>
-            <input id="event-title" type="text" required value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t('event.titlePlaceholder')} autoFocus />
+            <label htmlFor="event-title">事件標題 *</label>
+            <input id="event-title" type="text" required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="輸入事件名稱..." autoFocus />
           </div>
           <div className="input-group">
-            <label htmlFor="event-desc">{t('event.desc')}</label>
-            <input id="event-desc" type="text" value={description} onChange={(e) => setDescription(e.target.value)} placeholder={t('event.descPlaceholder')} />
+            <label htmlFor="event-desc">說明（選填）</label>
+            <input id="event-desc" type="text" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="補充說明..." />
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <div className="input-group">
-              <label htmlFor="event-start">{t('event.start')}</label>
+              <label htmlFor="event-start">開始日期</label>
               <input id="event-start" type="date" value={startDate} onChange={(e) => { setStartDate(e.target.value); if (e.target.value > endDate) setEndDate(e.target.value); }} />
             </div>
             <div className="input-group">
-              <label htmlFor="event-end">{t('event.end')}</label>
+              <label htmlFor="event-end">結束日期</label>
               <input id="event-end" type="date" value={endDate} min={startDate} onChange={(e) => setEndDate(e.target.value)} />
             </div>
           </div>
 
           {/* Color picker */}
           <div className="input-group">
-            <label>{t('event.color')}</label>
+            <label>事件顏色</label>
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
               {COLOR_OPTIONS.map((c) => (
                 <button
-                   key={c}
+                  key={c}
                   type="button"
                   onClick={() => setColor(c)}
                   style={{
@@ -117,14 +115,14 @@ export function EventModal({ event, defaultDate, onClose }: EventModalProps) {
 
           <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
             <button type="submit" className="btn-primary" disabled={saving}>
-              {saving ? t('event.saving') : isEdit ? t('event.update') : t('event.add')}
+              {saving ? '儲存中...' : isEdit ? '更新事件' : '新增事件'}
             </button>
             <button type="button" onClick={onClose} style={{ padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-main)', fontWeight: 600, flex: 1 }}>
-              {t('common.cancel')}
+              取消
             </button>
             {isEdit && (
               <button type="button" onClick={handleDelete} style={{ padding: '0.75rem', borderRadius: 'var(--radius-md)', border: 'none', background: 'rgba(239,68,68,0.1)', color: 'var(--priority-high)', fontWeight: 600 }}>
-                {t('common.delete')}
+                刪除
               </button>
             )}
           </div>

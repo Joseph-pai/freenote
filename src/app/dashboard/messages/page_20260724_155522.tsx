@@ -4,7 +4,6 @@ import { useAuthStore } from '../../../stores/authStore';
 import { useMessageStore } from '../../../stores/messageStore';
 import { sendMessage, markMessagesAsRead, deleteMessage, subscribeToMessages } from '../../../lib/firebase/messages';
 import { Send, MessageSquare, Trash2, ArrowLeft } from 'lucide-react';
-import { useTranslation } from '../../../lib/i18n';
 
 function ConversationItem({
   conversation,
@@ -21,13 +20,12 @@ function ConversationItem({
   unreadCount: number;
   userFriendNicknames?: Record<string, string>;
 }) {
-  const { t, lang } = useTranslation();
   const otherUserId = conversation.participants.find((id: string) => id !== currentUserId) || currentUserId;
-  const otherNickname = userFriendNicknames?.[otherUserId] || conversation.participantNicknames[otherUserId] || t('friends.unknownUser');
+  const otherNickname = userFriendNicknames?.[otherUserId] || conversation.participantNicknames[otherUserId] || '未知用戶';
   const otherAvatar = conversation.participantAvatars[otherUserId];
 
   const date = conversation.lastMessageAt
-    ? new Date(conversation.lastMessageAt).toLocaleDateString(lang === 'en' ? 'en-US' : 'zh-TW', {
+    ? new Date(conversation.lastMessageAt).toLocaleDateString('zh-TW', {
         month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
       })
     : '';
@@ -89,7 +87,6 @@ function ConversationItem({
 function MessagesContent() {
   const { user } = useAuthStore();
   const { conversations, messages, activeConversationId, setActiveConversationId, loading } = useMessageStore();
-  const { t, lang } = useTranslation();
   const [inputText, setInputText] = useState('');
   const [hoveredMsgId, setHoveredMsgId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -132,19 +129,19 @@ function MessagesContent() {
     if (!user || !activeConversationId || !inputText.trim()) return;
 
     try {
-      await sendMessage(activeConversationId, user.uid, user.nickname || t('friends.unknownUser'), inputText.trim());
+      await sendMessage(activeConversationId, user.uid, user.nickname || '未知用戶', inputText.trim());
       setInputText('');
     } catch (err: any) {
-      alert((lang === 'en' ? 'Failed to send: ' : '發送失敗: ') + err.message);
+      alert('發送失敗: ' + err.message);
     }
   };
 
   const handleDeleteMessage = async (msgId: string) => {
-    if (!confirm(lang === 'en' ? 'Are you sure you want to delete this message?' : '確定要刪除這則訊息嗎？')) return;
+    if (!confirm('確定要刪除這則訊息嗎？')) return;
     try {
       await deleteMessage(msgId);
     } catch (err: any) {
-      alert((lang === 'en' ? 'Delete failed: ' : '刪除失敗: ') + err.message);
+      alert('刪除失敗: ' + err.message);
     }
   };
 
@@ -162,17 +159,17 @@ function MessagesContent() {
       }}>
         <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--border)' }}>
           <h2 style={{ fontWeight: 700, fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <MessageSquare size={20} /> {t('nav.messages')}
+            <MessageSquare size={20} /> 訊息
           </h2>
         </div>
         <div style={{ flex: 1, overflowY: 'auto' }}>
           {loading ? (
-             <p style={{ padding: '1.5rem', color: 'var(--text-muted)', fontSize: '0.875rem', textAlign: 'center' }}>{t('common.loading')}</p>
+             <p style={{ padding: '1.5rem', color: 'var(--text-muted)', fontSize: '0.875rem', textAlign: 'center' }}>載入中...</p>
           ) : conversations.length === 0 ? (
             <div style={{ padding: '2rem 1rem', textAlign: 'center', color: 'var(--text-muted)' }}>
               <p style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>💬</p>
-              <p style={{ fontSize: '0.875rem' }}>{lang === 'en' ? 'No conversations yet' : '還沒有對話'}</p>
-              <p style={{ fontSize: '0.75rem', marginTop: '0.25rem' }}>{lang === 'en' ? 'Go to Friends page to start a chat' : '請到「好友」頁面發起聊天'}</p>
+              <p style={{ fontSize: '0.875rem' }}>還沒有對話</p>
+              <p style={{ fontSize: '0.75rem', marginTop: '0.25rem' }}>請到「好友」頁面發起聊天</p>
             </div>
           ) : (
             conversations.map(conv => {
@@ -200,7 +197,7 @@ function MessagesContent() {
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
             <div style={{ textAlign: 'center' }}>
               <p style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>💬</p>
-              <p style={{ fontWeight: 600 }}>{t('messages.selectChat')}</p>
+              <p style={{ fontWeight: 600 }}>選擇一個對話開始聊天</p>
             </div>
           </div>
         ) : (
@@ -208,7 +205,7 @@ function MessagesContent() {
             {/* Chat Header */}
             {activeConversation && (() => {
               const otherId = activeConversation.participants.find(id => id !== user.uid) || '';
-              const otherName = user.friendNicknames?.[otherId] || activeConversation.participantNicknames[otherId] || t('friends.unknownUser');
+              const otherName = user.friendNicknames?.[otherId] || activeConversation.participantNicknames[otherId] || '未知用戶';
               const otherAvatar = activeConversation.participantAvatars?.[otherId];
               return (
                 <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--border)', background: 'var(--surface)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -235,7 +232,7 @@ function MessagesContent() {
             <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {activeMessages.map((msg, idx) => {
                 const isMe = msg.senderId === user.uid;
-                const time = new Date(msg.createdAt).toLocaleTimeString(lang === 'en' ? 'en-US' : 'zh-TW', { hour: '2-digit', minute: '2-digit' });
+                const time = new Date(msg.createdAt).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
                 const showSender = !isMe && (idx === 0 || activeMessages[idx - 1].senderId !== msg.senderId);
                 return (
                   <div
@@ -246,7 +243,7 @@ function MessagesContent() {
                   >
                     {showSender && (
                       <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '3px', paddingLeft: '4px' }}>
-                        {user.friendNicknames?.[msg.senderId] || msg.senderNickname || t('friends.unknownUser')}
+                        {user.friendNicknames?.[msg.senderId] || msg.senderNickname || '未知用戶'}
                       </p>
                     )}
                     <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.5rem', flexDirection: isMe ? 'row-reverse' : 'row', width: '100%', maxWidth: '100%', alignSelf: isMe ? 'flex-end' : 'flex-start' }}>
@@ -276,7 +273,7 @@ function MessagesContent() {
                             color: 'var(--text-muted)', padding: '4px',
                             opacity: 0.7, flexShrink: 0,
                           }}
-                          title={lang === 'en' ? 'Delete Message' : '刪除訊息'}
+                          title="刪除訊息"
                         >
                           <Trash2 size={14} />
                         </button>
@@ -298,7 +295,7 @@ function MessagesContent() {
                   type="text"
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
-                  placeholder={t('messages.placeholder')}
+                  placeholder="輸入訊息..."
                   style={{
                     flex: 1, padding: '0.75rem 1rem',
                     borderRadius: 'var(--radius-md)', border: '1px solid var(--border)',

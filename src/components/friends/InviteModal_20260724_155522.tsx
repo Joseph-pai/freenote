@@ -2,7 +2,6 @@
 import React, { useState } from 'react';
 import { useAuthStore } from '../../stores/authStore';
 import { generateInviteCode, useInviteCode } from '../../lib/firebase/friends';
-import { useTranslation } from '../../lib/i18n';
 
 interface InviteModalProps {
   onClose: () => void;
@@ -10,7 +9,6 @@ interface InviteModalProps {
 
 export function InviteModal({ onClose }: InviteModalProps) {
   const { user } = useAuthStore();
-  const { t, lang } = useTranslation();
   
   const [mode, setMode] = useState<'generate' | 'use'>('generate');
   const [inviteCode, setInviteCode] = useState('');
@@ -18,15 +16,6 @@ export function InviteModal({ onClose }: InviteModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-
-  const translateError = (msg: string) => {
-    if (msg === '邀請碼無效') return t('friends.inviteCodeInvalid');
-    if (msg === '此邀請碼已被使用') return t('friends.inviteCodeUsed');
-    if (msg === '邀請碼已過期') return t('friends.inviteCodeExpired');
-    if (msg === '不能使用自己的邀請碼') return t('friends.inviteSelfError');
-    if (msg === '你們已經是好友了') return t('friends.alreadyFriends');
-    return msg;
-  };
 
   const handleGenerate = async () => {
     if (!user) return;
@@ -36,7 +25,7 @@ export function InviteModal({ onClose }: InviteModalProps) {
       const invite = await generateInviteCode(user.uid);
       setGeneratedCode(invite.code);
     } catch (err: any) {
-      setError((lang === 'en' ? 'Generation failed: ' : '產生失敗：') + translateError(err.message));
+      setError('產生失敗：' + err.message);
     } finally {
       setLoading(false);
     }
@@ -49,11 +38,11 @@ export function InviteModal({ onClose }: InviteModalProps) {
     setError('');
     setSuccess('');
     try {
-      await useInviteCode(inviteCode.trim(), user.uid, user.nickname || t('friends.unknownUser'), user.avatarUrl);
-      setSuccess(t('friends.joinSuccess'));
+      await useInviteCode(inviteCode.trim(), user.uid, user.nickname || '未知用戶', user.avatarUrl);
+      setSuccess('加入成功！對方已新增至您的好友列表。');
       setInviteCode('');
     } catch (err: any) {
-      setError(translateError(err.message));
+      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -66,7 +55,7 @@ export function InviteModal({ onClose }: InviteModalProps) {
     >
       <div onClick={(e) => e.stopPropagation()} style={{ background: 'var(--surface)', borderRadius: 'var(--radius-lg)', padding: '1.5rem', width: '100%', maxWidth: '400px', boxShadow: 'var(--shadow-md)' }}>
         <h2 style={{ marginBottom: '1.25rem', fontWeight: 700, fontSize: '1.125rem', textAlign: 'center' }}>
-          {t('friends.invite')}
+          好友邀請
         </h2>
         
         <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', background: 'var(--border)', padding: '4px', borderRadius: 'var(--radius-md)' }}>
@@ -74,13 +63,13 @@ export function InviteModal({ onClose }: InviteModalProps) {
             onClick={() => { setMode('generate'); setError(''); setSuccess(''); }}
             style={{ flex: 1, padding: '6px', borderRadius: 'var(--radius-sm)', background: mode === 'generate' ? 'var(--surface)' : 'transparent', color: mode === 'generate' ? 'var(--text-main)' : 'var(--text-muted)', fontWeight: mode === 'generate' ? 600 : 400 }}
           >
-            {t('friends.generateCode')}
+            產生邀請碼
           </button>
           <button
             onClick={() => { setMode('use'); setError(''); setSuccess(''); }}
             style={{ flex: 1, padding: '6px', borderRadius: 'var(--radius-sm)', background: mode === 'use' ? 'var(--surface)' : 'transparent', color: mode === 'use' ? 'var(--text-main)' : 'var(--text-muted)', fontWeight: mode === 'use' ? 600 : 400 }}
           >
-            {t('friends.enterCode')}
+            輸入邀請碼
           </button>
         </div>
 
@@ -91,15 +80,15 @@ export function InviteModal({ onClose }: InviteModalProps) {
           <div style={{ textAlign: 'center' }}>
             {generatedCode ? (
               <div style={{ marginBottom: '1rem' }}>
-                <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>{t('friends.inviteCodeLabel')}</p>
+                <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>您的專屬邀請碼 (48小時內有效)：</p>
                 <div style={{ padding: '1rem', background: 'var(--background)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', fontSize: '1.5rem', fontWeight: 700, letterSpacing: '2px', color: 'var(--primary)' }}>
                   {generatedCode}
                 </div>
-                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>{t('friends.inviteCodeDesc')}</p>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>將此邀請碼發送給朋友，對方輸入後即可直接成為您的好友。</p>
               </div>
             ) : (
               <button onClick={handleGenerate} className="btn-primary" style={{ width: '100%', marginBottom: '0.5rem' }} disabled={loading}>
-                {loading ? (lang === 'en' ? 'Generating...' : '產生中...') : t('friends.generateBtn')}
+                {loading ? '產生中...' : '產生一次性邀請碼'}
               </button>
             )}
           </div>
@@ -111,19 +100,19 @@ export function InviteModal({ onClose }: InviteModalProps) {
                 required
                 value={inviteCode}
                 onChange={(e) => setInviteCode(e.target.value)}
-                placeholder={lang === 'en' ? 'Enter 8-character code...' : '輸入 8 碼邀請碼...'}
+                placeholder="輸入 8 碼邀請碼..."
                 style={{ textAlign: 'center', fontSize: '1.125rem', letterSpacing: '1px' }}
                 autoFocus
               />
             </div>
             <button type="submit" className="btn-primary" style={{ width: '100%' }} disabled={loading || !inviteCode}>
-              {loading ? (lang === 'en' ? 'Joining...' : '加入中...') : t('friends.joinBtn')}
+              {loading ? '加入中...' : '加入好友'}
             </button>
           </form>
         )}
 
         <button type="button" onClick={onClose} style={{ width: '100%', padding: '0.75rem', marginTop: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-main)', fontWeight: 600 }}>
-          {lang === 'en' ? 'Close' : '關閉'}
+          關閉
         </button>
       </div>
     </div>

@@ -4,12 +4,10 @@ import { useAuthStore } from '../../stores/authStore';
 import { subscribeToConversations } from '../../lib/firebase/messages';
 import { useMessageStore } from '../../stores/messageStore';
 import { useRouter, usePathname } from 'next/navigation';
-import { useTranslation } from '../../lib/i18n';
 
 export function GlobalMessageListener() {
   const { user } = useAuthStore();
   const { conversations, activeConversationId, initialized } = useMessageStore();
-  const { lang } = useTranslation();
   const router = useRouter();
   const pathname = usePathname();
   const prevConvsRef = useRef<Record<string, number>>({});
@@ -54,12 +52,11 @@ export function GlobalMessageListener() {
            // Since we can only send messages from the active conversation page currently,
            // if we are not actively in it, it MUST be from someone else.
            const otherUserId = conv.participants.find((id: string) => id !== user?.uid) || '';
-           const fallbackName = lang === 'en' ? 'Unknown User' : '未知用戶';
-           const senderName = user?.friendNicknames?.[otherUserId] || conv.participantNicknames[otherUserId] || fallbackName;
+           const senderName = user?.friendNicknames?.[otherUserId] || conv.participantNicknames[otherUserId] || '未知用戶';
            
            setToastMessage({
              id: Date.now().toString(),
-             title: lang === 'en' ? `New message from ${senderName}` : `新訊息來自 ${senderName}`,
+             title: `新訊息來自 ${senderName}`,
              text: conv.lastMessage,
              convId: conv.id
            });
@@ -75,7 +72,7 @@ export function GlobalMessageListener() {
 
     prevConvsRef.current = newTimes;
 
-  }, [conversations, initialized, activeConversationId, pathname, user, lang]);
+  }, [conversations, initialized, activeConversationId, pathname, user]);
 
   if (!toastMessage) return null;
 

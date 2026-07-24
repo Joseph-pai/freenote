@@ -8,7 +8,6 @@ import { EventModal } from '../../../components/calendar/EventModal';
 import { ShareModal } from '../../../components/shared/ShareModal';
 import { CalendarProvider } from '../../../components/calendar/CalendarProvider';
 import { ChevronLeft, ChevronRight, Plus, Users, Pencil } from 'lucide-react';
-import { useTranslation } from '../../../lib/i18n';
 
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
 const MONTH_NAMES = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
@@ -31,14 +30,6 @@ function buildCalendarDays(year: number, month: number) {
 export default function CalendarPage() {
   const { user } = useAuthStore();
   const { events, currentYear, currentMonth, setCurrentMonth } = useCalendarStore();
-  const { t, lang } = useTranslation();
-
-  const WEEKDAYS = lang === 'en'
-    ? ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-    : ['日', '一', '二', '三', '四', '五', '六'];
-  const MONTH_NAMES = lang === 'en'
-    ? ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-    : ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
 
   const [showModal, setShowModal] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
@@ -92,7 +83,7 @@ export default function CalendarPage() {
             <ChevronLeft size={18} />
           </button>
           <h2 style={{ fontWeight: 700, fontSize: '1.25rem', minWidth: '120px', textAlign: 'center' }}>
-            {lang === 'en' ? `${MONTH_NAMES[currentMonth]} ${currentYear}` : `${currentYear}年 ${MONTH_NAMES[currentMonth]}`}
+            {currentYear}年 {MONTH_NAMES[currentMonth]}
           </h2>
           <button onClick={nextMonth} style={{ padding: '6px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', color: 'var(--text-main)' }}>
             <ChevronRight size={18} />
@@ -101,7 +92,7 @@ export default function CalendarPage() {
             onClick={() => setCurrentMonth(new Date().getFullYear(), new Date().getMonth())}
             style={{ padding: '4px 12px', fontSize: '0.8125rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}
           >
-            {t('calendar.today')}
+            今天
           </button>
         </div>
         <button
@@ -110,7 +101,7 @@ export default function CalendarPage() {
           className="btn-primary"
           style={{ width: 'auto', padding: '0.5rem 1rem', gap: '0.375rem' }}
         >
-          <Plus size={18} /> {t('calendar.addEvent')}
+          <Plus size={18} /> 新增事件
         </button>
       </div>
 
@@ -180,7 +171,7 @@ export default function CalendarPage() {
                 ))}
                 {dayEvents.length > 3 && (
                   <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', paddingLeft: '2px' }}>
-                    +{dayEvents.length - 3} {t('calendar.more')}
+                    +{dayEvents.length - 3} 更多
                   </div>
                 )}
               </div>
@@ -193,7 +184,7 @@ export default function CalendarPage() {
       {selectedDay && selectedDayEvents.length > 0 && (
         <div style={{ marginTop: '1.25rem' }}>
           <h3 style={{ fontWeight: 600, fontSize: '0.9375rem', marginBottom: '0.75rem', color: 'var(--text-muted)' }}>
-            {selectedDay}{t('calendar.eventListTitle')}
+            {selectedDay} 的事件
           </h3>
           {selectedDayEvents.map((ev) => (
             <div

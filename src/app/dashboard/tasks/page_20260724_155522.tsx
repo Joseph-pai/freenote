@@ -7,7 +7,6 @@ import { TaskProvider } from '../../../components/tasks/TaskProvider';
 import { TaskModal } from '../../../components/tasks/TaskModal';
 import { ShareModal } from '../../../components/shared/ShareModal';
 import { Plus, CheckCircle2, Circle, Calendar, Flag, Pencil, Users } from 'lucide-react';
-import { useTranslation } from '../../../lib/i18n';
 
 const priorityColor: Record<string, string> = {
   high: 'var(--priority-high)',
@@ -16,17 +15,16 @@ const priorityColor: Record<string, string> = {
   none: 'var(--priority-none)',
 };
 
+const priorityLabel: Record<string, string> = {
+  high: '高', medium: '中', low: '低', none: '—',
+};
+
 function TaskItem({ task, onEdit, onShare }: { task: Task; onEdit: (t: Task) => void; onShare: (t: Task) => void }) {
-  const { t, lang } = useTranslation();
   const toggleComplete = () => updateTask(task.id, { completed: !task.completed });
   const dueLabel = task.dueDate
-    ? new Date(task.dueDate).toLocaleDateString(lang === 'en' ? 'en-US' : 'zh-TW', { month: 'short', day: 'numeric' })
+    ? new Date(task.dueDate).toLocaleDateString('zh-TW', { month: 'short', day: 'numeric' })
     : null;
   const isOverdue = task.dueDate && !task.completed && task.dueDate < Date.now();
-
-  const priorityLabel: Record<string, string> = lang === 'en'
-    ? { high: 'High', medium: 'Medium', low: 'Low', none: '—' }
-    : { high: '高', medium: '中', low: '低', none: '—' };
 
   return (
     <div style={{
@@ -54,7 +52,7 @@ function TaskItem({ task, onEdit, onShare }: { task: Task; onEdit: (t: Task) => 
           justifyContent: 'center',
           WebkitTapHighlightColor: 'transparent',
         }}
-        aria-label={task.completed ? (lang === 'en' ? 'Mark incomplete' : '標記未完成') : (lang === 'en' ? 'Mark complete' : '標記完成')}
+        aria-label={task.completed ? '標記未完成' : '標記完成'}
       >
         {task.completed ? <CheckCircle2 size={20} /> : <Circle size={20} />}
       </button>
@@ -84,16 +82,16 @@ function TaskItem({ task, onEdit, onShare }: { task: Task; onEdit: (t: Task) => 
           {dueLabel && (
             <span style={{ display: 'flex', alignItems: 'center', gap: '3px',
               fontSize: '0.75rem', color: isOverdue ? 'var(--priority-high)' : 'var(--text-muted)' }}>
-              <Calendar size={12} /> {dueLabel}{isOverdue ? (lang === 'en' ? ' Overdue' : ' 已逾期') : ''}
+              <Calendar size={12} /> {dueLabel}{isOverdue ? ' 已逾期' : ''}
             </span>
           )}
         </div>
       </div>
 
-      <button onClick={() => onEdit(task)} style={{ flexShrink: 0, color: 'var(--text-muted)', padding: '4px' }} aria-label={t('common.edit')}>
+      <button onClick={() => onEdit(task)} style={{ flexShrink: 0, color: 'var(--text-muted)', padding: '4px' }} aria-label="編輯任務">
         <Pencil size={16} />
       </button>
-      <button onClick={() => onShare(task)} style={{ flexShrink: 0, color: 'var(--text-muted)', padding: '4px' }} aria-label={t('share.title')}>
+      <button onClick={() => onShare(task)} style={{ flexShrink: 0, color: 'var(--text-muted)', padding: '4px' }} aria-label="共用任務">
         <Users size={16} />
       </button>
     </div>
@@ -102,7 +100,6 @@ function TaskItem({ task, onEdit, onShare }: { task: Task; onEdit: (t: Task) => 
 
 export default function TasksPage() {
   const { tasks, loading } = useTaskStore();
-  const { t, lang } = useTranslation();
   const [showModal, setShowModal] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [sharingTask, setSharingTask] = useState<Task | null>(null);
@@ -122,11 +119,9 @@ export default function TasksPage() {
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
-            <h2 style={{ fontWeight: 700, fontSize: '1.25rem' }}>{t('nav.tasks')}</h2>
+            <h2 style={{ fontWeight: 700, fontSize: '1.25rem' }}>任務清單</h2>
             <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
-              {activeCount > 0 
-                ? (lang === 'en' ? `${activeCount} active tasks` : `${activeCount} 個待完成`)
-                : (lang === 'en' ? 'All tasks completed 🎉' : '所有任務已完成 🎉')}
+              {activeCount > 0 ? `${activeCount} 個待完成` : '所有任務已完成 🎉'}
             </p>
           </div>
           <button
@@ -135,7 +130,7 @@ export default function TasksPage() {
             className="btn-primary"
             style={{ width: 'auto', padding: '0.625rem 1rem', gap: '0.375rem' }}
           >
-            <Plus size={18} /> {t('tasks.addTask')}
+            <Plus size={18} /> 新增
           </button>
         </div>
 
@@ -156,25 +151,19 @@ export default function TasksPage() {
                 transition: 'all 0.15s ease',
               }}
             >
-              {f === 'all' 
-                ? (lang === 'en' ? 'All' : '全部') 
-                : f === 'active' 
-                ? (lang === 'en' ? 'Active' : '待完成') 
-                : (lang === 'en' ? 'Completed' : '已完成')}
+              {f === 'all' ? '全部' : f === 'active' ? '待完成' : '已完成'}
             </button>
           ))}
         </div>
 
         {/* Task list */}
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>{t('common.loading')}</div>
+          <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>載入中...</div>
         ) : filtered.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '4rem 1rem', color: 'var(--text-muted)' }}>
             <p style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>📋</p>
-            <p style={{ fontWeight: 500 }}>{lang === 'en' ? 'No tasks' : '沒有任務'}</p>
-            <p style={{ fontSize: '0.875rem', marginTop: '0.25rem' }}>
-              {lang === 'en' ? 'Click top right to add your first task!' : '點擊右上角新增您的第一個任務！'}
-            </p>
+            <p style={{ fontWeight: 500 }}>沒有任務</p>
+            <p style={{ fontSize: '0.875rem', marginTop: '0.25rem' }}>點擊右上角新增您的第一個任務！</p>
           </div>
         ) : (
           <div>

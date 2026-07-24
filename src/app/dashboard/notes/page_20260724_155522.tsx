@@ -9,30 +9,26 @@ import { createNote, updateNote, deleteNote } from '../../../lib/firebase/notes'
 import { NoteProvider } from '../../../components/notes/NoteProvider';
 import { ShareModal } from '../../../components/shared/ShareModal';
 import { Plus, Pin, PinOff, Trash2, Eye, Pencil, Search, Users, ArrowLeft } from 'lucide-react';
-import { useTranslation } from '../../../lib/i18n';
 
 // ── Auto-save hook ──────────────────────────────────────────
-function useAutoSave(noteId: string | null, title: string, content: string, defaultTitle: string) {
+function useAutoSave(noteId: string | null, title: string, content: string) {
   useEffect(() => {
     if (!noteId) return;
     const timer = setTimeout(() => {
-      updateNote(noteId, { title: title || defaultTitle, content });
+      updateNote(noteId, { title: title || '無標題', content });
     }, 800);
     return () => clearTimeout(timer);
-  }, [noteId, title, content, defaultTitle]);
+  }, [noteId, title, content]);
 }
 
 // ── Note list item ──────────────────────────────────────────
 function NoteListItem({
   note, active, onClick,
 }: { note: Note; active: boolean; onClick: () => void }) {
-  const { lang } = useTranslation();
   const preview = note.content.replace(/[#*`>\-_]/g, '').slice(0, 80);
-  const date = new Date(note.updatedAt).toLocaleDateString(lang === 'en' ? 'en-US' : 'zh-TW', {
+  const date = new Date(note.updatedAt).toLocaleDateString('zh-TW', {
     month: 'short', day: 'numeric',
   });
-  const defaultTitle = lang === 'en' ? 'Untitled' : '無標題';
-  const emptyNoteText = lang === 'en' ? 'Empty note' : '空白記事';
   return (
     <button
       onClick={onClick}
@@ -52,7 +48,7 @@ function NoteListItem({
           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
           flex: 1, paddingRight: '0.5rem',
         }}>
-          {note.pinned && '📌 '}{note.title || defaultTitle}
+          {note.pinned && '📌 '}{note.title || '無標題'}
         </p>
         <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', flexShrink: 0 }}>{date}</span>
       </div>
@@ -60,7 +56,7 @@ function NoteListItem({
         fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px',
         whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
       }}>
-        {preview || emptyNoteText}
+        {preview || '空白記事'}
       </p>
     </button>
   );
@@ -70,7 +66,6 @@ function NoteListItem({
 export default function NotesPage() {
   const { notes, loading, activeNoteId, setActiveNoteId } = useNoteStore();
   const { user } = useAuthStore();
-  const { t, lang } = useTranslation();
 
   const [search, setSearch] = useState('');
   const [previewMode, setPreviewMode] = useState(false);
@@ -89,10 +84,8 @@ export default function NotesPage() {
     }
   }, [activeNoteId]);
 
-  const defaultTitle = lang === 'en' ? 'Untitled' : '無標題';
-
   // Auto-save
-  useAutoSave(activeNoteId, title, content, defaultTitle);
+  useAutoSave(activeNoteId, title, content);
 
   const handleNewNote = useCallback(async () => {
     if (!user) return;
@@ -108,7 +101,7 @@ export default function NotesPage() {
   };
 
   const handleDelete = async () => {
-    if (!activeNote || !confirm(t('notes.deleteConfirm'))) return;
+    if (!activeNote || !confirm('確定刪除這篇記事？')) return;
     await deleteNote(activeNote.id);
     setActiveNoteId(null);
   };
@@ -135,7 +128,7 @@ export default function NotesPage() {
           {/* Header */}
           <div style={{ padding: '1rem', borderBottom: '1px solid var(--border)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-              <h2 style={{ fontWeight: 700, fontSize: '1.0625rem' }}>{t('nav.notes')}</h2>
+              <h2 style={{ fontWeight: 700, fontSize: '1.0625rem' }}>個人記事</h2>
               <button
                 id="new-note-btn"
                 onClick={handleNewNote}
@@ -146,7 +139,7 @@ export default function NotesPage() {
                   display: 'flex', alignItems: 'center', gap: '4px',
                 }}
               >
-                <Plus size={14} /> {t('notes.addNote')}
+                <Plus size={14} /> 新增
               </button>
             </div>
             {/* Search */}
@@ -154,7 +147,7 @@ export default function NotesPage() {
               <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
               <input
                 type="text"
-                placeholder={lang === 'en' ? 'Search notes...' : '搜尋記事...'}
+                placeholder="搜尋記事..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 style={{
@@ -170,11 +163,11 @@ export default function NotesPage() {
           {/* List */}
           <div style={{ flex: 1, overflowY: 'auto' }}>
             {loading ? (
-              <p style={{ padding: '1.5rem', color: 'var(--text-muted)', fontSize: '0.875rem', textAlign: 'center' }}>{t('common.loading')}</p>
+              <p style={{ padding: '1.5rem', color: 'var(--text-muted)', fontSize: '0.875rem', textAlign: 'center' }}>載入中...</p>
             ) : filtered.length === 0 ? (
               <div style={{ padding: '2rem 1rem', textAlign: 'center', color: 'var(--text-muted)' }}>
                 <p style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📝</p>
-                <p style={{ fontSize: '0.875rem' }}>{lang === 'en' ? 'Click "Add" to create your first note' : '點擊「新增」建立您的第一篇記事'}</p>
+                <p style={{ fontSize: '0.875rem' }}>點擊「新增」建立您的第一篇記事</p>
               </div>
             ) : filtered.map((note) => (
               <NoteListItem
