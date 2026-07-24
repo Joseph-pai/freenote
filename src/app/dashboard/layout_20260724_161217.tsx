@@ -1,7 +1,6 @@
 import React from 'react';
 import { AppShell } from '../../components/layout/AppShell';
 import { GlobalMessageListener } from '../../components/messages/GlobalMessageListener';
-import { FriendProvider } from '../../components/friends/FriendProvider';
 
 export default function DashboardLayout({
   children,
@@ -11,9 +10,7 @@ export default function DashboardLayout({
   return (
     <AppShell>
       <GlobalMessageListener />
-      <FriendProvider>
-        {children}
-      </FriendProvider>
+      {children}
     </AppShell>
   );
 }

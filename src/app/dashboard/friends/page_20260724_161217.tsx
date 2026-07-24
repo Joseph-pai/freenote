@@ -5,6 +5,7 @@ import { useAuthStore } from '../../../stores/authStore';
 import { useFriendStore } from '../../../stores/friendStore';
 import { acceptFriendRequest, rejectFriendRequest, removeFriend, updateFriendNickname } from '../../../lib/firebase/friends';
 import { getOrCreateConversation } from '../../../lib/firebase/messages';
+import { FriendProvider } from '../../../components/friends/FriendProvider';
 import { InviteModal } from '../../../components/friends/InviteModal';
 import { UserPlus, UserCheck, UserX, UserMinus, MessageSquare, Edit2, Check, X } from 'lucide-react';
 import { useTranslation } from '../../../lib/i18n';
@@ -76,6 +77,7 @@ export default function FriendsPage() {
   };
 
   return (
+    <FriendProvider>
       <div style={{ maxWidth: '800px', margin: '0 auto' }}>
         
         {/* Header */}
@@ -203,5 +205,6 @@ export default function FriendsPage() {
 
         {showInviteModal && <InviteModal onClose={() => setShowInviteModal(false)} />}
       </div>
+    </FriendProvider>
   );
 }
