@@ -141,6 +141,7 @@ export default function CalendarPage() {
               <div
                 key={key}
                 onClick={() => handleDayClick(day)}
+                className="calendar-day-cell"
                 style={{
                   minHeight: '80px', padding: '4px',
                   borderTop: '1px solid var(--border)',
@@ -151,7 +152,9 @@ export default function CalendarPage() {
                 }}
               >
                 {/* Day number */}
-                <div style={{
+                <div 
+                  className="calendar-day-number"
+                  style={{
                   width: 26, height: 26, borderRadius: '50%',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: '0.8125rem', fontWeight: isToday ? 700 : 400,
@@ -167,6 +170,7 @@ export default function CalendarPage() {
                     key={ev.id}
                     onClick={(e) => { e.stopPropagation(); setEditingEvent(ev); setShowModal(true); }}
                     title={ev.title}
+                    className="calendar-event"
                     style={{
                       background: ev.color, color: '#fff',
                       borderRadius: '3px', padding: '1px 5px',

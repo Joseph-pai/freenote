@@ -48,23 +48,3 @@
     border-right: none !important;
   }
 }
-
-/* ── Container Queries for Main Workspace ── */
-@container main-workspace (max-width: 600px) {
-  /* Scale down fonts or grid when workspace is small */
-  .calendar-day-number {
-    width: 22px !important;
-    height: 22px !important;
-    font-size: 0.75rem !important;
-  }
-  .calendar-event {
-    font-size: 0.6rem !important;
-    padding: 1px 3px !important;
-  }
-}
-
-@container main-workspace (max-width: 400px) {
-  .calendar-day-cell {
-    min-height: 60px !important;
-  }
-}

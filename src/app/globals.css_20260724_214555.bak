@@ -39,7 +39,6 @@ body {
   background-color: var(--background);
   color: var(--text-main);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  font-size: clamp(0.875rem, 1cqi + 0.5rem, 1rem); /* Fluid typography based on container */
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
