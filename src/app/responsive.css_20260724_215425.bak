@@ -50,27 +50,8 @@
 }
 
 /* ── Container Queries for Main Workspace ── */
-
-/* Fluid sizing for continuous zooming based on container width */
-.calendar-day-cell {
-  min-height: max(80px, 12cqi) !important;
-}
-
-.calendar-day-number {
-  width: max(26px, 3.5cqi) !important;
-  height: max(26px, 3.5cqi) !important;
-  font-size: clamp(0.8125rem, 2cqi, 2rem) !important;
-}
-
-.calendar-event {
-  font-size: clamp(0.6875rem, 1.3cqi, 1.25rem) !important;
-  padding: max(1px, 0.2cqi) max(5px, 0.6cqi) !important;
-  margin-bottom: max(2px, 0.3cqi) !important;
-  border-radius: max(3px, 0.4cqi) !important;
-}
-
 @container main-workspace (max-width: 600px) {
-  /* Scale down fonts or grid when workspace is very small */
+  /* Scale down fonts or grid when workspace is small */
   .calendar-day-number {
     width: 22px !important;
     height: 22px !important;

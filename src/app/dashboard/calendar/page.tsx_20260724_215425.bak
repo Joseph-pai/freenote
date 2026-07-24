@@ -83,7 +83,7 @@ export default function CalendarPage() {
 
   return (
     <CalendarProvider>
-      <div style={{ width: '100%', margin: '0 auto' }}>
+      <div style={{ maxWidth: '800px', margin: '0 auto' }}>
 
         {/* ── Header ── */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
