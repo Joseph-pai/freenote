@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuthStore } from '../../../stores/authStore';
 import { useMessageStore } from '../../../stores/messageStore';
 import { sendMessage, markMessagesAsRead, deleteMessage, subscribeToMessages } from '../../../lib/firebase/messages';
@@ -94,48 +94,6 @@ function MessagesContent() {
   const [hoveredMsgId, setHoveredMsgId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const unsubRef = useRef<(() => void) | null>(null);
-  const listRef = useRef<HTMLDivElement>(null);
-
-  const [listWidth, setListWidth] = useState(280);
-  const isResizing = useRef(false);
-
-  const startResizing = useCallback(() => {
-    isResizing.current = true;
-    document.body.style.cursor = 'col-resize';
-    document.body.style.userSelect = 'none';
-  }, []);
-
-  const stopResizing = useCallback(() => {
-    isResizing.current = false;
-    document.body.style.cursor = 'default';
-    document.body.style.userSelect = 'auto';
-  }, []);
-
-  const resize = useCallback((clientX: number) => {
-    if (isResizing.current && listRef.current) {
-      const rect = listRef.current.getBoundingClientRect();
-      const newWidth = Math.min(Math.max(clientX - rect.left, 200), 500);
-      setListWidth(newWidth);
-    }
-  }, []);
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => resize(e.clientX);
-    const handleTouchMove = (e: TouchEvent) => resize(e.touches[0].clientX);
-    const handleMouseUp = () => stopResizing();
-
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
-    window.addEventListener('touchmove', handleTouchMove, { passive: false });
-    window.addEventListener('touchend', handleMouseUp);
-
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-      window.removeEventListener('touchmove', handleTouchMove);
-      window.removeEventListener('touchend', handleMouseUp);
-    };
-  }, [resize, stopResizing]);
 
   const activeConversation = conversations.find(c => c.id === activeConversationId);
   const activeMessages = activeConversationId ? (messages[activeConversationId] || []) : [];
@@ -196,11 +154,11 @@ function MessagesContent() {
     <div className={`layout-container ${activeConversationId ? 'show-detail' : 'show-list'}`} style={{ display: 'flex', height: '100%', margin: '-1.5rem', overflow: 'hidden' }}>
       
       {/* ── Conversation List Panel ── */}
-      <div className="list-panel" ref={listRef} style={{
-        width: `${listWidth}px`, flexShrink: 0,
+      <div className="list-panel" style={{
+        width: '280px', flexShrink: 0,
+        borderRight: '1px solid var(--border)',
         display: 'flex', flexDirection: 'column',
         background: 'var(--surface)',
-        position: 'relative'
       }}>
         <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--border)' }}>
           <h2 style={{ fontWeight: 700, fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -234,30 +192,10 @@ function MessagesContent() {
             })
           )}
         </div>
-
-        {/* Resizer Handle */}
-        <div
-          onMouseDown={startResizing}
-          onTouchStart={startResizing}
-          className="desktop-only"
-          style={{
-            position: 'absolute',
-            top: 0,
-            right: 0,
-            width: '4px',
-            height: '100%',
-            cursor: 'col-resize',
-            backgroundColor: 'var(--border)',
-            zIndex: 10,
-            transition: 'background-color 0.2s',
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--primary)')}
-          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--border)')}
-        />
       </div>
 
       {/* ── Chat Panel ── */}
-      <div className="detail-panel" style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'var(--background)', overflow: 'hidden', minWidth: 0 }}>
+      <div className="detail-panel" style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'var(--background)', overflow: 'hidden' }}>
         {!activeConversationId ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
             <div style={{ textAlign: 'center' }}>

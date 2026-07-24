@@ -53,7 +53,7 @@
 
 /* Fluid sizing for continuous zooming based on container width */
 .calendar-day-cell {
-  /* Let flex / grid handle the height */
+  min-height: max(80px, 12cqi) !important;
 }
 
 .calendar-day-number {

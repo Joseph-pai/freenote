@@ -78,48 +78,6 @@ export default function NotesPage() {
   const [content, setContent] = useState('');
   const [sharingNote, setSharingNote] = useState<Note | null>(null);
 
-  const [listWidth, setListWidth] = useState(260);
-  const isResizing = useRef(false);
-  const listRef = useRef<HTMLDivElement>(null);
-
-  const startResizing = useCallback(() => {
-    isResizing.current = true;
-    document.body.style.cursor = 'col-resize';
-    document.body.style.userSelect = 'none';
-  }, []);
-
-  const stopResizing = useCallback(() => {
-    isResizing.current = false;
-    document.body.style.cursor = 'default';
-    document.body.style.userSelect = 'auto';
-  }, []);
-
-  const resize = useCallback((clientX: number) => {
-    if (isResizing.current && listRef.current) {
-      const rect = listRef.current.getBoundingClientRect();
-      const newWidth = Math.min(Math.max(clientX - rect.left, 200), 600);
-      setListWidth(newWidth);
-    }
-  }, []);
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => resize(e.clientX);
-    const handleTouchMove = (e: TouchEvent) => resize(e.touches[0].clientX);
-    const handleMouseUp = () => stopResizing();
-
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
-    window.addEventListener('touchmove', handleTouchMove, { passive: false });
-    window.addEventListener('touchend', handleMouseUp);
-
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-      window.removeEventListener('touchmove', handleTouchMove);
-      window.removeEventListener('touchend', handleMouseUp);
-    };
-  }, [resize, stopResizing]);
-
   const activeNote = notes.find((n) => n.id === activeNoteId) ?? null;
 
   // Sync editor state when active note changes
@@ -168,11 +126,11 @@ export default function NotesPage() {
       }}>
 
         {/* ── Note List Panel ── */}
-        <div className="list-panel" ref={listRef} style={{
-          width: `${listWidth}px`, flexShrink: 0,
+        <div className="list-panel" style={{
+          width: '260px', flexShrink: 0,
+          borderRight: '1px solid var(--border)',
           display: 'flex', flexDirection: 'column',
           background: 'var(--surface)',
-          position: 'relative'
         }}>
           {/* Header */}
           <div style={{ padding: '1rem', borderBottom: '1px solid var(--border)' }}>
@@ -227,30 +185,10 @@ export default function NotesPage() {
               />
             ))}
           </div>
-
-          {/* Resizer Handle */}
-          <div
-            onMouseDown={startResizing}
-            onTouchStart={startResizing}
-            className="desktop-only"
-            style={{
-              position: 'absolute',
-              top: 0,
-              right: 0,
-              width: '4px',
-              height: '100%',
-              cursor: 'col-resize',
-              backgroundColor: 'var(--border)',
-              zIndex: 10,
-              transition: 'background-color 0.2s',
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--primary)')}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--border)')}
-          />
         </div>
 
         {/* ── Editor Panel ── */}
-        <div className="detail-panel" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
+        <div className="detail-panel" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           {!activeNote ? (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
               <div style={{ textAlign: 'center' }}>
