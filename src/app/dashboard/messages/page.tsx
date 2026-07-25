@@ -2,9 +2,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuthStore } from '../../../stores/authStore';
 import { useMessageStore } from '../../../stores/messageStore';
-import { sendMessage, markMessagesAsRead, deleteMessage, subscribeToMessages } from '../../../lib/firebase/messages';
-import { Send, MessageSquare, Trash2, ArrowLeft, Users, Edit2, Paperclip, FileText, Check, X } from 'lucide-react';
-import { updateGroupName } from '../../../lib/firebase/messages';
+import { useFriendStore } from '../../../stores/friendStore';
+import { sendMessage, markMessagesAsRead, deleteMessage, subscribeToMessages, createGroupConversation, updateGroupName } from '../../../lib/firebase/messages';
+import { Send, MessageSquare, Trash2, ArrowLeft, Users, Edit2, Paperclip, FileText, Check, X, Plus } from 'lucide-react';
 import { WebRTCManager } from '../../../lib/webrtc/webrtc';
 import { useTranslation } from '../../../lib/i18n';
 
@@ -91,11 +91,17 @@ function ConversationItem({
 function MessagesContent() {
   const { user } = useAuthStore();
   const { conversations, messages, activeConversationId, setActiveConversationId, loading } = useMessageStore();
+  const { friends } = useFriendStore();
   const { t, lang } = useTranslation();
   const [inputText, setInputText] = useState('');
   const [hoveredMsgId, setHoveredMsgId] = useState<string | null>(null);
   const [isEditingGroupName, setIsEditingGroupName] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
+  
+  const [isCreatingGroup, setIsCreatingGroup] = useState(false);
+  const [createGroupName, setCreateGroupName] = useState('');
+  const [selectedFriendIds, setSelectedFriendIds] = useState<string[]>([]);
+  
   const webrtcManagerRef = useRef<WebRTCManager | null>(null);
   const [incomingFiles, setIncomingFiles] = useState<{senderId: string, fileName: string, fileSize: number, accept: () => void, reject: () => void}[]>([]);
   
@@ -220,6 +226,38 @@ function MessagesContent() {
     }
   };
 
+  const handleCreateGroup = async () => {
+    if (!user || !createGroupName.trim() || selectedFriendIds.length === 0) return;
+    
+    try {
+      const participantProfiles: Record<string, { nickname: string; avatar: string | null }> = {};
+      selectedFriendIds.forEach(id => {
+        const friend = friends.find(f => f.uid === id);
+        if (friend) {
+          participantProfiles[id] = {
+            nickname: user.friendNicknames?.[id] || friend.nickname,
+            avatar: friend.avatarUrl
+          };
+        }
+      });
+      
+      const newConvId = await createGroupConversation(
+        user.uid,
+        user.nickname || t('friends.unknownUser'),
+        user.avatarUrl,
+        selectedFriendIds,
+        participantProfiles,
+        createGroupName.trim()
+      );
+      setIsCreatingGroup(false);
+      setCreateGroupName('');
+      setSelectedFriendIds([]);
+      setActiveConversationId(newConvId);
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
   if (!user) return null;
 
   return (
@@ -232,10 +270,18 @@ function MessagesContent() {
         background: 'var(--surface)',
         position: 'relative'
       }}>
-        <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--border)' }}>
+        <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h2 style={{ fontWeight: 700, fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <MessageSquare size={20} /> {t('nav.messages')}
           </h2>
+          <button 
+            onClick={() => setIsCreatingGroup(true)}
+            className="btn-primary" 
+            style={{ padding: '6px', borderRadius: '50%' }}
+            title={lang === 'en' ? 'Create Group' : '建立群組'}
+          >
+            <Plus size={18} />
+          </button>
         </div>
         <div style={{ flex: 1, overflowY: 'auto' }}>
           {loading ? (
@@ -497,6 +543,60 @@ function MessagesContent() {
           </>
         )}
       </div>
+
+      {/* Create Group Modal */}
+      {isCreatingGroup && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div style={{ background: 'var(--surface)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', width: '100%', maxWidth: '400px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 700 }}>{lang === 'en' ? 'Create Group' : '建立群組'}</h3>
+            <input 
+              type="text" 
+              placeholder={lang === 'en' ? 'Group Name' : '群組名稱'} 
+              value={createGroupName}
+              onChange={e => setCreateGroupName(e.target.value)}
+              style={{ width: '100%', padding: '0.75rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', background: 'var(--background)', color: 'var(--text-main)', fontSize: '0.9375rem', outline: 'none' }}
+            />
+            
+            <div style={{ maxHeight: '200px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '0.5rem' }}>
+              {friends.length === 0 ? (
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', textAlign: 'center', padding: '1rem' }}>{lang === 'en' ? 'No friends found' : '沒有好友'}</p>
+              ) : (
+                friends.map(f => {
+                  const friendName = user.friendNicknames?.[f.uid] || f.nickname;
+                  const isSelected = selectedFriendIds.includes(f.uid);
+                  return (
+                    <label key={f.uid} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', padding: '4px' }}>
+                      <input 
+                        type="checkbox" 
+                        checked={isSelected}
+                        onChange={() => {
+                          if (isSelected) {
+                            setSelectedFriendIds(prev => prev.filter(id => id !== f.uid));
+                          } else {
+                            setSelectedFriendIds(prev => [...prev, f.uid]);
+                          }
+                        }}
+                      />
+                      <span style={{ fontSize: '0.9375rem' }}>{friendName}</span>
+                    </label>
+                  );
+                })
+              )}
+            </div>
+            
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+              <button onClick={() => { setIsCreatingGroup(false); setCreateGroupName(''); setSelectedFriendIds([]); }} className="btn-secondary">{t('common.cancel')}</button>
+              <button 
+                onClick={handleCreateGroup} 
+                className="btn-primary"
+                disabled={!createGroupName.trim() || selectedFriendIds.length === 0}
+              >
+                {t('common.save')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
