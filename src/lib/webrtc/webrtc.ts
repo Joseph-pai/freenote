@@ -20,16 +20,26 @@ export class WebRTCManager {
 
   private currentUserId: string;
 
-  public onFileReceived?: (senderId: string, fileName: string, data: Blob) => void;
-  public onIncomingFileRequest?: (
-    senderId: string,
-    conversationId: string,
-    fileName: string,
-    fileSize: number,
-    accept: () => void,
-    reject: () => void
-  ) => void;
-  public onProgress?: (type: 'send' | 'receive', percent: number, fileName: string) => void;
+  public listeners = new Set<{
+    onFileReceived?: (senderId: string, fileName: string, data: Blob) => void;
+    onIncomingFileRequest?: (
+      senderId: string,
+      conversationId: string,
+      fileName: string,
+      fileSize: number,
+      accept: () => void,
+      reject: () => void
+    ) => void;
+    onProgress?: (type: 'send' | 'receive', percent: number, fileName: string) => void;
+  }>();
+
+  public addListener(listener: any) {
+    this.listeners.add(listener);
+  }
+
+  public removeListener(listener: any) {
+    this.listeners.delete(listener);
+  }
 
   constructor(currentUserId: string) {
     this.currentUserId = currentUserId;
@@ -79,8 +89,10 @@ export class WebRTCManager {
             const chunks = this.receivedBuffers.get(targetId) || [];
             const blob = new Blob(chunks);
             const metadata = this.currentMetadata.get(targetId);
-            if (this.onFileReceived && metadata) {
-              this.onFileReceived(targetId, metadata.fileName, blob);
+            if (metadata) {
+              this.listeners.forEach(l => {
+                if (l.onFileReceived) l.onFileReceived(targetId, metadata.fileName, blob);
+              });
             }
             // Reset
             this.receivedBuffers.delete(targetId);
@@ -100,9 +112,11 @@ export class WebRTCManager {
         this.receivedBytes.set(targetId, currentBytes);
 
         const meta = this.currentMetadata.get(targetId);
-        if (meta && meta.fileSize > 0 && this.onProgress) {
+        if (meta && meta.fileSize > 0) {
           const percent = Math.min(100, Math.round((currentBytes / meta.fileSize) * 100));
-          this.onProgress('receive', percent, meta.fileName);
+          this.listeners.forEach(l => {
+            if (l.onProgress) l.onProgress('receive', percent, meta.fileName);
+          });
         }
       }
     };
@@ -126,34 +140,38 @@ export class WebRTCManager {
     if (signal.senderId === this.currentUserId) return;
 
     if (signal.type === 'file-request') {
-      if (this.onIncomingFileRequest) {
-        this.onIncomingFileRequest(
-          signal.senderId,
-          signal.conversationId,
-          signal.data.fileName,
-          signal.data.fileSize,
-          async () => {
-            // Accept
-            await sendSignal({
-              conversationId: signal.conversationId,
-              senderId: this.currentUserId,
-              targetId: signal.senderId,
-              type: 'file-accept',
-              data: { fileName: signal.data.fileName }
-            });
-          },
-          async () => {
-            // Reject
-            await sendSignal({
-              conversationId: signal.conversationId,
-              senderId: this.currentUserId,
-              targetId: signal.senderId,
-              type: 'file-reject',
-              data: { fileName: signal.data.fileName }
-            });
-          }
-        );
-      }
+      let handled = false;
+      this.listeners.forEach(l => {
+        if (l.onIncomingFileRequest) {
+          handled = true;
+          l.onIncomingFileRequest(
+            signal.senderId,
+            signal.conversationId,
+            signal.data.fileName,
+            signal.data.fileSize,
+            async () => {
+              // Accept
+              await sendSignal({
+                conversationId: signal.conversationId,
+                senderId: this.currentUserId,
+                targetId: signal.senderId,
+                type: 'file-accept',
+                data: { fileName: signal.data.fileName }
+              });
+            },
+            async () => {
+              // Reject
+              await sendSignal({
+                conversationId: signal.conversationId,
+                senderId: this.currentUserId,
+                targetId: signal.senderId,
+                type: 'file-reject',
+                data: { fileName: signal.data.fileName }
+              });
+            }
+          );
+        }
+      });
     } else if (signal.type === 'file-accept') {
       // Receiver accepted, initiate WebRTC connection
       const file = this.pendingFilesToSend.get(signal.senderId);
@@ -239,14 +257,20 @@ export class WebRTCManager {
         dc.send(buffer);
         offset += buffer.byteLength;
 
-        if (this.onProgress) {
-          const percent = Math.min(100, Math.round((offset / file.size) * 100));
-          this.onProgress('send', percent, file.name);
-        }
-
         if (offset < file.size) {
+          this.listeners.forEach(l => {
+            if (l.onProgress) {
+              const percent = Math.min(100, Math.round((offset / file.size) * 100));
+              l.onProgress('send', percent, file.name);
+            }
+          });
           setTimeout(() => readSlice(offset), 5);
         } else {
+          this.listeners.forEach(l => {
+            if (l.onProgress) {
+              l.onProgress('send', 100, file.name);
+            }
+          });
           dc.send(JSON.stringify({ type: 'EOF', fileName: file.name, fileSize: file.size }));
         }
       };
