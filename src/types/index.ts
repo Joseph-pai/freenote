@@ -111,6 +111,15 @@ export interface Message {
   text: string;
   createdAt: number;
   readBy: string[];
+  
+  // File transfer fields
+  fileUrl?: string;
+  fileName?: string;
+  fileSize?: number;
+  fileType?: string;
+  storagePath?: string;
+  downloadedBy?: string[];
+  isFileDeleted?: boolean;
 }
 
 export interface WebRTCSignal {
