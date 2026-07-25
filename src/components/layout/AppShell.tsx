@@ -44,6 +44,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     percent: number;
     fileName: string;
   } | null>(null);
+  const [completedTransfer, setCompletedTransfer] = React.useState<{
+    fileName: string;
+    data: Blob;
+  } | null>(null);
 
   const [sidebarWidth, setSidebarWidth] = React.useState(220);
   const isResizing = React.useRef(false);
@@ -107,7 +111,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       setIncomingTransfer({ senderId, conversationId, fileName, fileSize, accept, reject });
     };
     manager.onFileReceived = async (senderId, fileName, data) => {
-      await saveFileToDisk(fileName, data);
+      setCompletedTransfer({ fileName, data });
       setTransferProgress(null);
     };
     manager.onProgress = (type, percent, fileName) => {
@@ -290,6 +294,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   setIncomingTransfer(null);
                 }} 
                 className="btn-secondary"
+                style={{ whiteSpace: 'nowrap', minWidth: '80px' }}
               >
                 {lang === 'en' ? 'Reject' : '拒絕'}
               </button>
@@ -299,6 +304,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   setIncomingTransfer(null);
                 }} 
                 className="btn-primary"
+                style={{ whiteSpace: 'nowrap', minWidth: '100px' }}
               >
                 {lang === 'en' ? 'Accept & Download' : '同意接收'}
               </button>
@@ -317,6 +323,42 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: '8px' }}>{transferProgress.fileName}</p>
           <div style={{ width: '100%', height: '6px', background: 'var(--border)', borderRadius: '3px', overflow: 'hidden' }}>
             <div style={{ width: `${transferProgress.percent}%`, height: '100%', background: 'var(--primary)', transition: 'width 0.2s' }} />
+          </div>
+        </div>
+      )}
+
+      {/* ── Global File Transfer Complete Modal ── */}
+      {completedTransfer && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div style={{ background: 'var(--surface)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', width: '100%', maxWidth: '400px', display: 'flex', flexDirection: 'column', gap: '1rem', boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={{ padding: '10px', background: 'rgba(34,197,94,0.1)', color: '#22c55e', borderRadius: '50%' }}>
+                <CheckSquare size={24} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '1.125rem', fontWeight: 700 }}>{lang === 'en' ? 'Transfer Complete' : '傳送完成'}</h3>
+                <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>{completedTransfer.fileName}</p>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+              <button 
+                onClick={() => setCompletedTransfer(null)} 
+                className="btn-secondary"
+                style={{ whiteSpace: 'nowrap', minWidth: '80px' }}
+              >
+                {lang === 'en' ? 'Close' : '關閉'}
+              </button>
+              <button 
+                onClick={async () => {
+                  await saveFileToDisk(completedTransfer.fileName, completedTransfer.data);
+                  setCompletedTransfer(null);
+                }} 
+                className="btn-primary"
+                style={{ whiteSpace: 'nowrap', minWidth: '100px' }}
+              >
+                {lang === 'en' ? 'Save File' : '儲存檔案'}
+              </button>
+            </div>
           </div>
         </div>
       )}
