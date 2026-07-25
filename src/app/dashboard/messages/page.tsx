@@ -3,8 +3,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuthStore } from '../../../stores/authStore';
 import { useMessageStore } from '../../../stores/messageStore';
 import { useFriendStore } from '../../../stores/friendStore';
-import { sendMessage, markMessagesAsRead, deleteMessage, subscribeToMessages, createGroupConversation, updateGroupName } from '../../../lib/firebase/messages';
-import { Send, MessageSquare, Trash2, ArrowLeft, Users, Edit2, Paperclip, FileText, Check, X, Plus } from 'lucide-react';
+import { sendMessage, markMessagesAsRead, deleteMessage, subscribeToMessages, createGroupConversation, updateGroupName, addGroupParticipants, removeGroupParticipant, updateGroupMemberNickname } from '../../../lib/firebase/messages';
+import { Send, MessageSquare, Trash2, ArrowLeft, Users, Edit2, Paperclip, FileText, Check, X, Plus, Settings, UserPlus, UserMinus } from 'lucide-react';
 import { WebRTCManager } from '../../../lib/webrtc/webrtc';
 import { useTranslation } from '../../../lib/i18n';
 
@@ -101,6 +101,12 @@ function MessagesContent() {
   const [isCreatingGroup, setIsCreatingGroup] = useState(false);
   const [createGroupName, setCreateGroupName] = useState('');
   const [selectedFriendIds, setSelectedFriendIds] = useState<string[]>([]);
+  
+  // Group member management state
+  const [isManagingGroup, setIsManagingGroup] = useState(false);
+  const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
+  const [editingMemberNickname, setEditingMemberNickname] = useState('');
+  const [addMemberFriendIds, setAddMemberFriendIds] = useState<string[]>([]);
   
   const webrtcManagerRef = useRef<WebRTCManager | null>(null);
   const [incomingFiles, setIncomingFiles] = useState<{senderId: string, fileName: string, fileSize: number, accept: () => void, reject: () => void}[]>([]);
@@ -271,13 +277,26 @@ function MessagesContent() {
         position: 'relative'
       }}>
         <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 style={{ fontWeight: 700, fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <h2 style={{ fontWeight: 700, fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-main)' }}>
             <MessageSquare size={20} /> {t('nav.messages')}
           </h2>
           <button 
             onClick={() => setIsCreatingGroup(true)}
-            className="btn-primary" 
-            style={{ padding: '6px', borderRadius: '50%' }}
+            style={{ 
+              width: '32px', 
+              height: '32px', 
+              borderRadius: '50%', 
+              background: 'var(--primary)', 
+              color: '#fff', 
+              border: 'none', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              cursor: 'pointer',
+              flexShrink: 0,
+              boxShadow: '0 2px 4px rgba(37,99,235,0.2)',
+              transition: 'all 0.15s'
+            }}
             title={lang === 'en' ? 'Create Group' : '建立群組'}
           >
             <Plus size={18} />
@@ -405,12 +424,22 @@ function MessagesContent() {
                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flex: 1 }}>
                       <p style={{ fontWeight: 700, fontSize: '1rem' }}>{displayName}</p>
                       {isGroup && activeConversation.adminId === user.uid && (
-                        <button 
-                          onClick={() => { setNewGroupName(activeConversation.groupName || ''); setIsEditingGroupName(true); }}
-                          style={{ color: 'var(--text-muted)', padding: '4px' }}
-                        >
-                          <Edit2 size={14} />
-                        </button>
+                        <>
+                          <button 
+                            onClick={() => { setNewGroupName(activeConversation.groupName || ''); setIsEditingGroupName(true); }}
+                            style={{ color: 'var(--text-muted)', padding: '4px', background: 'none', border: 'none', cursor: 'pointer' }}
+                            title={lang === 'en' ? 'Edit Group Name' : '修改群組名稱'}
+                          >
+                            <Edit2 size={14} />
+                          </button>
+                          <button 
+                            onClick={() => setIsManagingGroup(true)}
+                            style={{ color: 'var(--text-muted)', padding: '4px', background: 'none', border: 'none', cursor: 'pointer', marginLeft: 'auto' }}
+                            title={lang === 'en' ? 'Manage Group Members' : '管理成員'}
+                          >
+                            <Settings size={18} />
+                          </button>
+                        </>
                       )}
                     </div>
                   )}
@@ -454,7 +483,7 @@ function MessagesContent() {
                   >
                     {showSender && (
                       <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '3px', paddingLeft: '4px' }}>
-                        {user.friendNicknames?.[msg.senderId] || msg.senderNickname || t('friends.unknownUser')}
+                        {activeConversation?.groupMemberNicknames?.[msg.senderId] || user.friendNicknames?.[msg.senderId] || msg.senderNickname || t('friends.unknownUser')}
                       </p>
                     )}
                     <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.5rem', flexDirection: isMe ? 'row-reverse' : 'row', width: '100%', maxWidth: '100%', alignSelf: isMe ? 'flex-end' : 'flex-start' }}>
@@ -594,6 +623,141 @@ function MessagesContent() {
                 {t('common.save')}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Manage Group Members Modal */}
+      {isManagingGroup && activeConversation && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div style={{ background: 'var(--surface)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', width: '100%', maxWidth: '480px', display: 'flex', flexDirection: 'column', gap: '1rem', maxHeight: '85vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 700 }}>{lang === 'en' ? 'Group Members Management' : '成員管理'}</h3>
+              <button onClick={() => setIsManagingGroup(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={20} /></button>
+            </div>
+
+            {/* Current Members List */}
+            <div>
+              <p style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '8px' }}>
+                {lang === 'en' ? 'Current Members' : '現有成員'} ({activeConversation.participants.length})
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '8px' }}>
+                {activeConversation.participants.map((memberId: string) => {
+                  const isAdmin = memberId === activeConversation.adminId;
+                  const currentNickname = activeConversation.groupMemberNicknames?.[memberId] || activeConversation.participantNicknames?.[memberId] || user.friendNicknames?.[memberId] || '成員';
+                  const isEditingThis = editingMemberId === memberId;
+
+                  return (
+                    <div key={memberId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 8px', background: 'var(--background)', borderRadius: '6px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
+                        <span style={{ fontSize: '0.9375rem', fontWeight: 600 }}>{currentNickname}</span>
+                        {isAdmin && (
+                          <span style={{ fontSize: '0.7rem', background: 'var(--primary)', color: '#fff', padding: '2px 6px', borderRadius: '4px' }}>
+                            {lang === 'en' ? 'Admin' : '管理員'}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Admin Actions */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        {isEditingThis ? (
+                          <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                            <input 
+                              type="text" 
+                              value={editingMemberNickname} 
+                              onChange={e => setEditingMemberNickname(e.target.value)}
+                              style={{ width: '100px', padding: '2px 6px', fontSize: '0.8125rem', borderRadius: '4px', border: '1px solid var(--border)' }}
+                            />
+                            <button onClick={async () => {
+                              try {
+                                await updateGroupMemberNickname(activeConversation.id, memberId, editingMemberNickname, user.uid);
+                                setEditingMemberId(null);
+                              } catch (e: any) { alert(e.message); }
+                            }} style={{ color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer' }}><Check size={16} /></button>
+                            <button onClick={() => setEditingMemberId(null)} style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}><X size={16} /></button>
+                          </div>
+                        ) : (
+                          <button onClick={() => { setEditingMemberId(memberId); setEditingMemberNickname(currentNickname); }} title={lang === 'en' ? 'Edit Member Nickname' : '修改暱稱'} style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}>
+                            <Edit2 size={14} />
+                          </button>
+                        )}
+
+                        {!isAdmin && (
+                          <button onClick={async () => {
+                            if (confirm(lang === 'en' ? 'Remove member from group?' : '確定要踢出此成員？')) {
+                              try {
+                                await removeGroupParticipant(activeConversation.id, memberId, user.uid);
+                              } catch (e: any) { alert(e.message); }
+                            }
+                          }} title={lang === 'en' ? 'Remove Member' : '踢出群組'} style={{ color: 'var(--danger, #ef4444)', background: 'none', border: 'none', cursor: 'pointer' }}>
+                            <UserMinus size={16} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Add New Members Section */}
+            {(() => {
+              const nonMemberFriends = friends.filter(f => !activeConversation.participants.includes(f.uid));
+              if (nonMemberFriends.length === 0) return null;
+
+              return (
+                <div>
+                  <p style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '8px' }}>
+                    {lang === 'en' ? 'Add Friends to Group' : '邀請好友加入'}
+                  </p>
+                  <div style={{ maxHeight: '140px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '8px' }}>
+                    {nonMemberFriends.map(f => {
+                      const friendName = user.friendNicknames?.[f.uid] || f.nickname;
+                      const isSelected = addMemberFriendIds.includes(f.uid);
+                      return (
+                        <label key={f.uid} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', padding: '4px' }}>
+                          <input 
+                            type="checkbox" 
+                            checked={isSelected}
+                            onChange={() => {
+                              if (isSelected) {
+                                setAddMemberFriendIds(prev => prev.filter(id => id !== f.uid));
+                              } else {
+                                setAddMemberFriendIds(prev => [...prev, f.uid]);
+                              }
+                            }}
+                          />
+                          <span style={{ fontSize: '0.875rem' }}>{friendName}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+
+                  {addMemberFriendIds.length > 0 && (
+                    <button 
+                      onClick={async () => {
+                        try {
+                          const profiles: Record<string, { nickname: string; avatar: string | null }> = {};
+                          addMemberFriendIds.forEach(id => {
+                            const friend = friends.find(f => f.uid === id);
+                            if (friend) {
+                              profiles[id] = { nickname: user.friendNicknames?.[id] || friend.nickname, avatar: friend.avatarUrl };
+                            }
+                          });
+                          await addGroupParticipants(activeConversation.id, addMemberFriendIds, profiles, user.uid);
+                          setAddMemberFriendIds([]);
+                        } catch (e: any) { alert(e.message); }
+                      }} 
+                      className="btn-primary" 
+                      style={{ marginTop: '10px', width: '100%', fontSize: '0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                    >
+                      <UserPlus size={16} /> {lang === 'en' ? 'Add Selected Members' : '將勾選的好友加入群組'}
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
+
           </div>
         </div>
       )}

@@ -100,6 +100,7 @@ export interface Conversation {
   isGroup?: boolean;
   groupName?: string;
   adminId?: string;
+  groupMemberNicknames?: Record<string, string>;
 }
 
 export interface Message {

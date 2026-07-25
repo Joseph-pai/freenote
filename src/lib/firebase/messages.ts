@@ -194,3 +194,67 @@ export const updateGroupName = async (conversationId: string, newName: string, u
     }
   }
 };
+
+export const addGroupParticipants = async (
+  conversationId: string, 
+  newParticipantIds: string[], 
+  participantProfiles: Record<string, { nickname: string; avatar: string | null }>,
+  userId: string
+) => {
+  const convRef = doc(db, 'conversations', conversationId);
+  const convSnap = await getDoc(convRef);
+  if (!convSnap.exists()) return;
+  const data = convSnap.data() as Conversation;
+  if (!data.isGroup || data.adminId !== userId) {
+    throw new Error('只有群組管理員可以新增成員');
+  }
+
+  const updatedParticipants = Array.from(new Set([...data.participants, ...newParticipantIds]));
+  const updatedNicknames = { ...data.participantNicknames };
+  const updatedAvatars = { ...data.participantAvatars };
+
+  newParticipantIds.forEach(id => {
+    if (participantProfiles[id]) {
+      updatedNicknames[id] = participantProfiles[id].nickname;
+      updatedAvatars[id] = participantProfiles[id].avatar;
+    }
+  });
+
+  await updateDoc(convRef, {
+    participants: updatedParticipants,
+    participantNicknames: updatedNicknames,
+    participantAvatars: updatedAvatars
+  });
+};
+
+export const removeGroupParticipant = async (conversationId: string, targetUserId: string, userId: string) => {
+  const convRef = doc(db, 'conversations', conversationId);
+  const convSnap = await getDoc(convRef);
+  if (!convSnap.exists()) return;
+  const data = convSnap.data() as Conversation;
+  if (!data.isGroup || data.adminId !== userId) {
+    throw new Error('只有群組管理員可以移除成員');
+  }
+  if (targetUserId === userId) {
+    throw new Error('管理員不能移除自己');
+  }
+
+  const updatedParticipants = data.participants.filter(id => id !== targetUserId);
+  await updateDoc(convRef, {
+    participants: updatedParticipants
+  });
+};
+
+export const updateGroupMemberNickname = async (conversationId: string, targetUserId: string, newNickname: string, userId: string) => {
+  const convRef = doc(db, 'conversations', conversationId);
+  const convSnap = await getDoc(convRef);
+  if (!convSnap.exists()) return;
+  const data = convSnap.data() as Conversation;
+  if (!data.isGroup || data.adminId !== userId) {
+    throw new Error('只有群組管理員可以修改成員暱稱');
+  }
+
+  await updateDoc(convRef, {
+    [`groupMemberNicknames.${targetUserId}`]: newNickname.trim()
+  });
+};
