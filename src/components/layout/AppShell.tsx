@@ -107,19 +107,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (!user) return;
 
     const manager = getWebRTCManager(user.uid);
-    manager.onIncomingFileRequest = (senderId, conversationId, fileName, fileSize, accept, reject) => {
-      setIncomingTransfer({ senderId, conversationId, fileName, fileSize, accept, reject });
-    };
-    manager.onFileReceived = async (senderId, fileName, data) => {
-      setCompletedTransfer({ fileName, data });
-      setTransferProgress(null);
-    };
-    manager.onProgress = (type, percent, fileName) => {
-      setTransferProgress({ type, percent, fileName });
-      if (percent >= 100) {
-        setTimeout(() => setTransferProgress(null), 2000);
+    const listener = {
+      onIncomingFileRequest: (senderId: string, conversationId: string, fileName: string, fileSize: number, accept: () => void, reject: () => void) => {
+        setIncomingTransfer({ senderId, conversationId, fileName, fileSize, accept, reject });
+      },
+      onFileReceived: async (senderId: string, fileName: string, data: Blob) => {
+        setCompletedTransfer({ fileName, data });
+        setTransferProgress(null);
+      },
+      onProgress: (type: 'send' | 'receive', percent: number, fileName: string) => {
+        setTransferProgress({ type, percent, fileName });
+        if (percent >= 100) {
+          setTimeout(() => setTransferProgress(null), 2000);
+        }
       }
     };
+    manager.addListener(listener);
     webrtcManagerRef.current = manager;
 
     const unsub = subscribeToSignals(user.uid, (signal) => {
@@ -127,6 +130,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     });
 
     return () => {
+      manager.removeListener(listener);
       unsub();
     };
   }, [user?.uid]);
