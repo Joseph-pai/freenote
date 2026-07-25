@@ -461,9 +461,9 @@ function MessagesContent() {
                         </p>
                       </div>
                     </div>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button onClick={() => { file.accept(); setIncomingFiles(prev => prev.filter((_, idx) => idx !== i)); }} className="btn-primary" style={{ padding: '4px 12px', fontSize: '0.875rem', whiteSpace: 'nowrap', minWidth: '70px' }}>{lang === 'en' ? 'Accept' : '接收'}</button>
-                      <button onClick={() => { file.reject(); setIncomingFiles(prev => prev.filter((_, idx) => idx !== i)); }} className="btn-secondary" style={{ padding: '4px 12px', fontSize: '0.875rem', whiteSpace: 'nowrap', minWidth: '70px' }}>{lang === 'en' ? 'Reject' : '拒絕'}</button>
+                    <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                      <button onClick={() => { file.accept(); setIncomingFiles(prev => prev.filter((_, idx) => idx !== i)); }} className="btn-primary" style={{ padding: '4px 12px', fontSize: '0.875rem', whiteSpace: 'nowrap', minWidth: '70px', flexShrink: 0 }}>{lang === 'en' ? 'Accept' : '接收'}</button>
+                      <button onClick={() => { file.reject(); setIncomingFiles(prev => prev.filter((_, idx) => idx !== i)); }} className="btn-secondary" style={{ padding: '4px 12px', fontSize: '0.875rem', whiteSpace: 'nowrap', minWidth: '70px', flexShrink: 0 }}>{lang === 'en' ? 'Reject' : '拒絕'}</button>
                     </div>
                   </div>
                 ))}

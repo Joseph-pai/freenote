@@ -16,6 +16,7 @@ export class WebRTCManager {
   private receivedBuffers: Map<string, ArrayBuffer[]> = new Map(); // key: senderId
   private receivedBytes: Map<string, number> = new Map();
   private currentMetadata: Map<string, { fileName: string; fileSize: number }> = new Map();
+  private candidateQueue: Map<string, RTCIceCandidateInit[]> = new Map(); // key: senderId
 
   private currentUserId: string;
 
@@ -178,6 +179,7 @@ export class WebRTCManager {
     } else if (signal.type === 'offer') {
       const pc = this.createPeerConnection(signal.senderId, signal.conversationId);
       await pc.setRemoteDescription(new RTCSessionDescription(signal.data));
+      
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
       await sendSignal({
@@ -187,15 +189,34 @@ export class WebRTCManager {
         type: 'answer',
         data: answer
       });
+
+      // Process queued candidates
+      const queue = this.candidateQueue.get(signal.senderId) || [];
+      for (const candidate of queue) {
+        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+      }
+      this.candidateQueue.delete(signal.senderId);
+
     } else if (signal.type === 'answer') {
       const pc = this.peerConnections.get(signal.senderId);
       if (pc) {
         await pc.setRemoteDescription(new RTCSessionDescription(signal.data));
+        
+        // Process queued candidates
+        const queue = this.candidateQueue.get(signal.senderId) || [];
+        for (const candidate of queue) {
+          await pc.addIceCandidate(new RTCIceCandidate(candidate));
+        }
+        this.candidateQueue.delete(signal.senderId);
       }
     } else if (signal.type === 'candidate') {
       const pc = this.peerConnections.get(signal.senderId);
-      if (pc) {
+      if (pc && pc.remoteDescription) {
         await pc.addIceCandidate(new RTCIceCandidate(signal.data));
+      } else {
+        const queue = this.candidateQueue.get(signal.senderId) || [];
+        queue.push(signal.data);
+        this.candidateQueue.set(signal.senderId, queue);
       }
     }
   }
@@ -242,6 +263,7 @@ export class WebRTCManager {
     this.dataChannels.clear();
     this.peerConnections.clear();
     this.pendingFilesToSend.clear();
+    this.candidateQueue.clear();
   }
 }
 
