@@ -101,6 +101,7 @@ function MessagesContent() {
   const [isCreatingGroup, setIsCreatingGroup] = useState(false);
   const [createGroupName, setCreateGroupName] = useState('');
   const [selectedFriendIds, setSelectedFriendIds] = useState<string[]>([]);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
   
   // Group member management state
   const [isManagingGroup, setIsManagingGroup] = useState(false);
@@ -469,7 +470,39 @@ function MessagesContent() {
             )}
 
             {/* Messages Area */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <div 
+              onDragOver={(e) => { e.preventDefault(); setIsDraggingOver(true); }}
+              onDragLeave={() => setIsDraggingOver(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setIsDraggingOver(false);
+                if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                  const file = e.dataTransfer.files[0];
+                  if (user && activeConversation && webrtcManagerRef.current) {
+                    const targetIds = activeConversation.participants.filter(id => id !== user.uid);
+                    targetIds.forEach(targetId => {
+                      webrtcManagerRef.current?.requestSendFile(targetId, activeConversation.id, file);
+                    });
+                    alert((lang === 'en' ? 'File transfer request sent: ' : '已發送檔案傳送請求：') + file.name + '\n' + (lang === 'en' ? '等待對方接收...' : '等待對方接收...'));
+                  }
+                }
+              }}
+              style={{ 
+                flex: 1, overflowY: 'auto', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem',
+                position: 'relative',
+                background: isDraggingOver ? 'rgba(37,99,235,0.05)' : 'transparent',
+                outline: isDraggingOver ? '2px dashed var(--primary)' : 'none',
+                outlineOffset: '-8px',
+                transition: 'all 0.2s'
+              }}
+            >
+              {isDraggingOver && (
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.85)', zIndex: 20, pointerEvents: 'none' }}>
+                  <p style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--primary)' }}>
+                    {lang === 'en' ? 'Drop file here to send' : '放開以拖曳傳送檔案'}
+                  </p>
+                </div>
+              )}
               {activeMessages.map((msg, idx) => {
                 const isMe = msg.senderId === user.uid;
                 const time = new Date(msg.createdAt).toLocaleTimeString(lang === 'en' ? 'en-US' : 'zh-TW', { hour: '2-digit', minute: '2-digit' });
@@ -535,14 +568,12 @@ function MessagesContent() {
                   <Paperclip size={20} />
                   <input type="file" style={{ display: 'none' }} onChange={(e) => {
                     const file = e.target.files?.[0];
-                    if (file && webrtcManagerRef.current && activeConversation) {
-                      // Basic implementation: initiate to first other participant.
-                      // For a complete group logic, we would initiate to all online participants.
-                      const targetId = activeConversation.participants.find(id => id !== user.uid);
-                      if (targetId) {
-                        webrtcManagerRef.current.initiateConnection(targetId);
-                        alert((lang === 'en' ? 'Requesting transfer for: ' : '要求傳送：') + file.name + '\n' + (lang === 'en' ? 'Waiting for recipient...' : '等待對方接收...'));
-                      }
+                    if (file && user && activeConversation && webrtcManagerRef.current) {
+                      const targetIds = activeConversation.participants.filter(id => id !== user.uid);
+                      targetIds.forEach(targetId => {
+                        webrtcManagerRef.current?.requestSendFile(targetId, activeConversation.id, file);
+                      });
+                      alert((lang === 'en' ? 'File transfer request sent: ' : '已發送檔案傳送請求：') + file.name + '\n' + (lang === 'en' ? 'Waiting for recipient...' : '等待對方接收...'));
                     }
                     e.target.value = '';
                   }} />

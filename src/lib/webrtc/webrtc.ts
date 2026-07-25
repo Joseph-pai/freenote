@@ -1,21 +1,40 @@
 import { sendSignal } from '../firebase/signaling';
 
-// Basic WebRTC Manager for P2P file transfers
+export interface PendingFileRequest {
+  id: string; // signal ID or unique ID
+  senderId: string;
+  senderName?: string;
+  fileName: string;
+  fileSize: number;
+  conversationId: string;
+}
+
 export class WebRTCManager {
   private peerConnections: Map<string, RTCPeerConnection> = new Map();
   private dataChannels: Map<string, RTCDataChannel> = new Map();
-  private currentUserId: string;
-  private conversationId: string;
-  
-  public onFileReceived?: (senderId: string, fileName: string, data: Blob) => void;
-  public onIncomingFileRequest?: (senderId: string, fileName: string, fileSize: number, accept: () => void, reject: () => void) => void;
+  private pendingFilesToSend: Map<string, File> = new Map(); // key: targetId
+  private receivedBuffers: Map<string, ArrayBuffer[]> = new Map(); // key: senderId
+  private receivedBytes: Map<string, number> = new Map();
+  private currentMetadata: Map<string, { fileName: string; fileSize: number }> = new Map();
 
-  constructor(currentUserId: string, conversationId: string) {
+  private currentUserId: string;
+
+  public onFileReceived?: (senderId: string, fileName: string, data: Blob) => void;
+  public onIncomingFileRequest?: (
+    senderId: string,
+    conversationId: string,
+    fileName: string,
+    fileSize: number,
+    accept: () => void,
+    reject: () => void
+  ) => void;
+  public onProgress?: (type: 'send' | 'receive', percent: number, fileName: string) => void;
+
+  constructor(currentUserId: string) {
     this.currentUserId = currentUserId;
-    this.conversationId = conversationId;
   }
 
-  private createPeerConnection(targetId: string) {
+  private createPeerConnection(targetId: string, conversationId: string) {
     const pc = new RTCPeerConnection({
       iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
     });
@@ -23,7 +42,7 @@ export class WebRTCManager {
     pc.onicecandidate = (event) => {
       if (event.candidate) {
         sendSignal({
-          conversationId: this.conversationId,
+          conversationId,
           senderId: this.currentUserId,
           targetId,
           type: 'candidate',
@@ -34,86 +53,186 @@ export class WebRTCManager {
 
     pc.ondatachannel = (event) => {
       const receiveChannel = event.channel;
-      receiveChannel.onmessage = (e) => {
-        // Handle incoming chunks here (simplified for skeleton)
-        if (this.onFileReceived) {
-          this.onFileReceived(targetId, 'received_file', new Blob([e.data]));
-        }
-      };
+      this.setupDataChannelEvents(receiveChannel, targetId);
     };
 
     this.peerConnections.set(targetId, pc);
     return pc;
   }
 
-  public async initiateConnection(targetId: string) {
-    const pc = this.createPeerConnection(targetId);
-    const dc = pc.createDataChannel('fileTransfer');
-    this.dataChannels.set(targetId, dc);
+  private setupDataChannelEvents(dc: RTCDataChannel, targetId: string) {
+    dc.binaryType = 'arraybuffer';
+    dc.onmessage = (e) => {
+      if (typeof e.data === 'string') {
+        try {
+          const meta = JSON.parse(e.data);
+          if (meta.type === 'HEADER') {
+            this.currentMetadata.set(targetId, { fileName: meta.fileName, fileSize: meta.fileSize });
+            this.receivedBuffers.set(targetId, []);
+            this.receivedBytes.set(targetId, 0);
+          } else if (meta.type === 'EOF') {
+            const chunks = this.receivedBuffers.get(targetId) || [];
+            const blob = new Blob(chunks);
+            const metadata = this.currentMetadata.get(targetId);
+            if (this.onFileReceived && metadata) {
+              this.onFileReceived(targetId, metadata.fileName, blob);
+            }
+            // Reset
+            this.receivedBuffers.delete(targetId);
+            this.receivedBytes.delete(targetId);
+            this.currentMetadata.delete(targetId);
+          }
+        } catch (err) {
+          console.error('Error parsing DataChannel string message:', err);
+        }
+      } else {
+        // Binary chunk
+        const chunks = this.receivedBuffers.get(targetId) || [];
+        chunks.push(e.data);
+        this.receivedBuffers.set(targetId, chunks);
 
-    const offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
+        const currentBytes = (this.receivedBytes.get(targetId) || 0) + e.data.byteLength;
+        this.receivedBytes.set(targetId, currentBytes);
 
+        const meta = this.currentMetadata.get(targetId);
+        if (meta && meta.fileSize > 0 && this.onProgress) {
+          const percent = Math.min(100, Math.round((currentBytes / meta.fileSize) * 100));
+          this.onProgress('receive', percent, meta.fileName);
+        }
+      }
+    };
+  }
+
+  public async requestSendFile(targetId: string, conversationId: string, file: File) {
+    this.pendingFilesToSend.set(targetId, file);
     await sendSignal({
-      conversationId: this.conversationId,
+      conversationId,
       senderId: this.currentUserId,
       targetId,
-      type: 'offer',
-      data: offer
+      type: 'file-request',
+      data: {
+        fileName: file.name,
+        fileSize: file.size
+      }
     });
   }
 
   public async handleSignal(signal: any) {
-    if (signal.senderId === this.currentUserId) return; // ignore own signals
-    
-    let pc = this.peerConnections.get(signal.senderId);
-    if (!pc && signal.type === 'offer') {
-      pc = this.createPeerConnection(signal.senderId);
-    }
-    if (!pc) return;
+    if (signal.senderId === this.currentUserId) return;
 
-    if (signal.type === 'offer') {
+    if (signal.type === 'file-request') {
+      if (this.onIncomingFileRequest) {
+        this.onIncomingFileRequest(
+          signal.senderId,
+          signal.conversationId,
+          signal.data.fileName,
+          signal.data.fileSize,
+          async () => {
+            // Accept
+            await sendSignal({
+              conversationId: signal.conversationId,
+              senderId: this.currentUserId,
+              targetId: signal.senderId,
+              type: 'file-accept',
+              data: { fileName: signal.data.fileName }
+            });
+          },
+          async () => {
+            // Reject
+            await sendSignal({
+              conversationId: signal.conversationId,
+              senderId: this.currentUserId,
+              targetId: signal.senderId,
+              type: 'file-reject',
+              data: { fileName: signal.data.fileName }
+            });
+          }
+        );
+      }
+    } else if (signal.type === 'file-accept') {
+      // Receiver accepted, initiate WebRTC connection
+      const file = this.pendingFilesToSend.get(signal.senderId);
+      if (file) {
+        const pc = this.createPeerConnection(signal.senderId, signal.conversationId);
+        const dc = pc.createDataChannel('fileTransfer');
+        this.dataChannels.set(signal.senderId, dc);
+
+        dc.onopen = () => {
+          this.sendFileChunks(dc, file);
+        };
+
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        await sendSignal({
+          conversationId: signal.conversationId,
+          senderId: this.currentUserId,
+          targetId: signal.senderId,
+          type: 'offer',
+          data: offer
+        });
+      }
+    } else if (signal.type === 'offer') {
+      const pc = this.createPeerConnection(signal.senderId, signal.conversationId);
       await pc.setRemoteDescription(new RTCSessionDescription(signal.data));
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
       await sendSignal({
-        conversationId: this.conversationId,
+        conversationId: signal.conversationId,
         senderId: this.currentUserId,
         targetId: signal.senderId,
         type: 'answer',
         data: answer
       });
     } else if (signal.type === 'answer') {
-      await pc.setRemoteDescription(new RTCSessionDescription(signal.data));
+      const pc = this.peerConnections.get(signal.senderId);
+      if (pc) {
+        await pc.setRemoteDescription(new RTCSessionDescription(signal.data));
+      }
     } else if (signal.type === 'candidate') {
-      await pc.addIceCandidate(new RTCIceCandidate(signal.data));
-    } else if (signal.type === 'file-request') {
-      if (this.onIncomingFileRequest) {
-        this.onIncomingFileRequest(
-          signal.senderId,
-          signal.data.fileName,
-          signal.data.fileSize,
-          () => {
-            sendSignal({
-              conversationId: this.conversationId,
-              senderId: this.currentUserId,
-              targetId: signal.senderId,
-              type: 'file-accept',
-              data: null
-            });
-          },
-          () => {
-            sendSignal({
-              conversationId: this.conversationId,
-              senderId: this.currentUserId,
-              targetId: signal.senderId,
-              type: 'file-reject',
-              data: null
-            });
-          }
-        );
+      const pc = this.peerConnections.get(signal.senderId);
+      if (pc) {
+        await pc.addIceCandidate(new RTCIceCandidate(signal.data));
       }
     }
+  }
+
+  private sendFileChunks(dc: RTCDataChannel, file: File) {
+    const chunkSize = 16384; // 16KB per chunk
+    let offset = 0;
+
+    // Send HEADER first
+    dc.send(JSON.stringify({ type: 'HEADER', fileName: file.name, fileSize: file.size }));
+
+    const readSlice = (o: number) => {
+      const slice = file.slice(o, o + chunkSize);
+      const reader = new FileReader();
+
+      reader.onload = (e) => {
+        if (!e.target?.result) return;
+        const buffer = e.target.result as ArrayBuffer;
+
+        // Low water mark flow control if needed, or simple send
+        dc.send(buffer);
+        offset += buffer.byteLength;
+
+        if (this.onProgress) {
+          const percent = Math.min(100, Math.round((offset / file.size) * 100));
+          this.onProgress('send', percent, file.name);
+        }
+
+        if (offset < file.size) {
+          // Send next chunk
+          setTimeout(() => readSlice(offset), 5);
+        } else {
+          // Send EOF
+          dc.send(JSON.stringify({ type: 'EOF', fileName: file.name, fileSize: file.size }));
+        }
+      };
+
+      reader.readAsArrayBuffer(slice);
+    };
+
+    readSlice(0);
   }
 
   public closeAll() {
@@ -121,5 +240,6 @@ export class WebRTCManager {
     this.peerConnections.forEach(pc => pc.close());
     this.dataChannels.clear();
     this.peerConnections.clear();
+    this.pendingFilesToSend.clear();
   }
 }
