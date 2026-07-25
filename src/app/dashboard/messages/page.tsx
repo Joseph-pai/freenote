@@ -3,10 +3,9 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuthStore } from '../../../stores/authStore';
 import { useMessageStore } from '../../../stores/messageStore';
 import { useFriendStore } from '../../../stores/friendStore';
-import { sendMessage, markMessagesAsRead, deleteMessage, subscribeToMessages, createGroupConversation, updateGroupName, addGroupParticipants, removeGroupParticipant, updateGroupMemberNickname, markFileDownloaded } from '../../../lib/firebase/messages';
-import { Send, MessageSquare, Trash2, ArrowLeft, Users, Edit2, Paperclip, FileText, Check, X, Plus, Settings, UserPlus, UserMinus, Download } from 'lucide-react';
-import { storage } from '../../../lib/firebase/config';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { sendMessage, markMessagesAsRead, deleteMessage, subscribeToMessages, createGroupConversation, updateGroupName, addGroupParticipants, removeGroupParticipant, updateGroupMemberNickname } from '../../../lib/firebase/messages';
+import { Send, MessageSquare, Trash2, ArrowLeft, Users, Edit2, Paperclip, FileText, Check, X, Plus, Settings, UserPlus, UserMinus } from 'lucide-react';
+import { getWebRTCManager, saveFileToDisk, WebRTCManager } from '../../../lib/webrtc/webrtc';
 import { useTranslation } from '../../../lib/i18n';
 
 function ConversationItem({
@@ -110,11 +109,21 @@ function MessagesContent() {
   const [editingMemberNickname, setEditingMemberNickname] = useState('');
   const [addMemberFriendIds, setAddMemberFriendIds] = useState<string[]>([]);
   
-  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const webrtcManagerRef = useRef<WebRTCManager | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const unsubRef = useRef<(() => void) | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (user && activeConversationId) {
+      const manager = getWebRTCManager(user.uid);
+      webrtcManagerRef.current = manager;
+    }
+    return () => {
+      webrtcManagerRef.current = null;
+    };
+  }, [activeConversationId, user]);
 
   const [listWidth, setListWidth] = useState(280);
   const isResizing = useRef(false);
@@ -208,45 +217,6 @@ function MessagesContent() {
     } catch (err: any) {
       alert((lang === 'en' ? 'Delete failed: ' : '刪除失敗: ') + err.message);
     }
-  };
-
-  const handleFileUpload = async (file: File) => {
-    if (!user || !activeConversationId) return;
-    
-    if (file.size > 10 * 1024 * 1024) {
-      alert(lang === 'en' ? 'File must be under 10MB' : '檔案大小不能超過 10MB');
-      return;
-    }
-
-    const messageId = Date.now().toString() + '_' + Math.random().toString(36).substring(2, 11);
-    const storagePath = `conversations/${activeConversationId}/${messageId}_${file.name}`;
-    const fileRef = ref(storage, storagePath);
-    const uploadTask = uploadBytesResumable(fileRef, file);
-
-    setUploadProgress(0);
-
-    uploadTask.on('state_changed', 
-      (snapshot) => {
-        const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
-        setUploadProgress(progress);
-      },
-      (error) => {
-        console.error(error);
-        alert('Upload failed: ' + error.message);
-        setUploadProgress(null);
-      },
-      async () => {
-        const fileUrl = await getDownloadURL(uploadTask.snapshot.ref);
-        setUploadProgress(null);
-        await sendMessage(activeConversationId, user.uid, user.nickname || t('friends.unknownUser'), `[File] ${file.name}`, {
-          fileUrl,
-          fileName: file.name,
-          fileSize: file.size,
-          storagePath,
-          fileType: file.type
-        });
-      }
-    );
   };
 
   const handleCreateGroup = async () => {
@@ -473,7 +443,13 @@ function MessagesContent() {
                 setIsDraggingOver(false);
                 if (e.dataTransfer.files && e.dataTransfer.files[0]) {
                   const file = e.dataTransfer.files[0];
-                  handleFileUpload(file);
+                  if (user && activeConversation && webrtcManagerRef.current) {
+                    const targetIds = activeConversation.participants.filter(id => id !== user.uid);
+                    targetIds.forEach(targetId => {
+                      webrtcManagerRef.current?.requestSendFile(targetId, activeConversation.id, file);
+                    });
+                    alert((lang === 'en' ? '⚠️ File request sent!\n\n🚨 IMPORTANT: Do NOT close or leave this page until the transfer is complete, otherwise it will be interrupted!' : '⚠️ 檔案傳送請求已發出！\n\n🚨 請注意：在對方接收完成前，【絕對不要】關閉或離開此畫面，否則傳輸將立刻中斷！'));
+                  }
                 }
               }}
               style={{ 
@@ -524,42 +500,7 @@ function MessagesContent() {
                         whiteSpace: 'pre-wrap',
                         textAlign: 'left',
                       }}>
-                        {msg.fileUrl ? (
-                          <div style={{ padding: '0.5rem', background: 'var(--background)', borderRadius: '8px', border: '1px solid var(--border)', minWidth: '220px', color: 'var(--text-main)' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                              <FileText size={24} color="var(--primary)" style={{ flexShrink: 0 }} />
-                              <div style={{ flex: 1, overflow: 'hidden' }}>
-                                <p style={{ fontSize: '0.875rem', fontWeight: 600, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }} title={msg.fileName}>{msg.fileName}</p>
-                                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                                  {msg.fileSize! < 1024 
-                                    ? `${msg.fileSize} B` 
-                                    : msg.fileSize! < 1024 * 1024 
-                                      ? `${(msg.fileSize! / 1024).toFixed(1)} KB` 
-                                      : `${(msg.fileSize! / (1024 * 1024)).toFixed(2)} MB`}
-                                </p>
-                              </div>
-                            </div>
-                            <button 
-                              onClick={() => {
-                                if (activeConversation) {
-                                  markFileDownloaded(msg.id, user.uid, activeConversation.participants);
-                                }
-                                window.open(msg.fileUrl, '_blank');
-                              }}
-                              className={msg.isFileDeleted ? "btn-secondary" : "btn-primary"} 
-                              style={{ width: '100%', padding: '6px', fontSize: '0.875rem', display: 'flex', justifyContent: 'center', alignItems: 'center' }}
-                              disabled={msg.isFileDeleted}
-                            >
-                              {msg.isFileDeleted ? (
-                                lang === 'en' ? 'File Expired/Deleted' : '檔案已失效或被刪除'
-                              ) : (
-                                <><Download size={14} style={{ marginRight: '6px' }} /> {lang === 'en' ? 'Download' : '下載'}</>
-                              )}
-                            </button>
-                          </div>
-                        ) : (
-                          <p style={{ fontSize: '0.9375rem', lineHeight: 1.5 }}>{msg.text}</p>
-                        )}
+                        <p style={{ fontSize: '0.9375rem', lineHeight: 1.5 }}>{msg.text}</p>
                       </div>
                       {/* Delete button - visible on hover */}
                       {hoveredMsgId === msg.id && (
@@ -592,8 +533,12 @@ function MessagesContent() {
                   <Paperclip size={20} />
                   <input type="file" style={{ display: 'none' }} onChange={(e) => {
                     const file = e.target.files?.[0];
-                    if (file) {
-                      handleFileUpload(file);
+                    if (file && user && activeConversation && webrtcManagerRef.current) {
+                      const targetIds = activeConversation.participants.filter(id => id !== user.uid);
+                      targetIds.forEach(targetId => {
+                        webrtcManagerRef.current?.requestSendFile(targetId, activeConversation.id, file);
+                      });
+                      alert((lang === 'en' ? '⚠️ File request sent!\n\n🚨 IMPORTANT: Do NOT close or leave this page until the transfer is complete, otherwise it will be interrupted!' : '⚠️ 檔案傳送請求已發出！\n\n🚨 請注意：在對方接收完成前，【絕對不要】關閉或離開此畫面，否則傳輸將立刻中斷！'));
                     }
                     e.target.value = '';
                   }} />
@@ -620,20 +565,6 @@ function MessagesContent() {
                 </button>
               </form>
             </div>
-
-            {uploadProgress !== null && (
-              <div style={{ padding: '0 1.5rem 1rem', background: 'var(--surface)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <div style={{ flex: 1, height: '6px', background: 'var(--border)', borderRadius: '3px', overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: `${uploadProgress}%`, background: 'var(--primary)', transition: 'width 0.2s' }}></div>
-                  </div>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{uploadProgress}%</span>
-                </div>
-                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                  {lang === 'en' ? 'Uploading file...' : '檔案上傳中...'}
-                </p>
-              </div>
-            )}
           </>
         )}
       </div>

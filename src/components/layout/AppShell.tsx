@@ -11,6 +11,8 @@ import {
   CheckSquare, BookOpen, Calendar, MessageCircle,
   LogOut, User, MessageSquare, Settings, FileText
 } from 'lucide-react';
+import { subscribeToSignals } from '../../lib/firebase/signaling';
+import { getWebRTCManager, saveFileToDisk, WebRTCManager } from '../../lib/webrtc/webrtc';
 
 const navItems = [
   { href: '/dashboard/calendar', key: 'nav.calendar', icon: Calendar },
@@ -27,7 +29,25 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { t, lang } = useTranslation();
   const [showSettings, setShowSettings] = React.useState(false);
 
-  // Global File Transfer state removed (now using Firebase Storage)
+  // Global P2P File Transfer state
+  const webrtcManagerRef = React.useRef<WebRTCManager | null>(null);
+  const [incomingTransfer, setIncomingTransfer] = React.useState<{
+    senderId: string;
+    conversationId: string;
+    fileName: string;
+    fileSize: number;
+    accept: () => void;
+    reject: () => void;
+  } | null>(null);
+  const [transferProgress, setTransferProgress] = React.useState<{
+    type: 'send' | 'receive';
+    percent: number;
+    fileName: string;
+  } | null>(null);
+  const [completedTransfer, setCompletedTransfer] = React.useState<{
+    fileName: string;
+    data: Blob;
+  } | null>(null);
 
   const [sidebarWidth, setSidebarWidth] = React.useState(220);
   const isResizing = React.useRef(false);
@@ -82,7 +102,38 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     }
   }, [user?.theme]);
 
+  // Subscribe to WebRTC signals globally
+  React.useEffect(() => {
+    if (!user) return;
 
+    const manager = getWebRTCManager(user.uid);
+    const listener = {
+      onIncomingFileRequest: (senderId: string, conversationId: string, fileName: string, fileSize: number, accept: () => void, reject: () => void) => {
+        setIncomingTransfer({ senderId, conversationId, fileName, fileSize, accept, reject });
+      },
+      onFileReceived: async (senderId: string, fileName: string, data: Blob) => {
+        setCompletedTransfer({ fileName, data });
+        setTransferProgress(null);
+      },
+      onProgress: (type: 'send' | 'receive', percent: number, fileName: string) => {
+        setTransferProgress({ type, percent, fileName });
+        if (percent >= 100) {
+          setTimeout(() => setTransferProgress(null), 2000);
+        }
+      }
+    };
+    manager.addListener(listener);
+    webrtcManagerRef.current = manager;
+
+    const unsub = subscribeToSignals(user.uid, (signal) => {
+      manager.handleSignal(signal);
+    });
+
+    return () => {
+      manager.removeListener(listener);
+      unsub();
+    };
+  }, [user?.uid]);
 
   const handleLogout = async () => {
     await logout();
@@ -219,8 +270,112 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         })}
       </nav>
 
-      {/* Settings Modal */}
       {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+
+      {/* ── Global P2P File Request Modal ── */}
+      {incomingTransfer && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div style={{ background: 'var(--surface)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', width: '100%', maxWidth: '400px', display: 'flex', flexDirection: 'column', gap: '1rem', boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={{ padding: '10px', background: 'rgba(37,99,235,0.1)', color: 'var(--primary)', borderRadius: '50%' }}>
+                <FileText size={24} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '1.125rem', fontWeight: 700 }}>{lang === 'en' ? 'Incoming File Request' : '收到檔案傳送請求'}</h3>
+                <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>P2P Direct Transfer</p>
+              </div>
+            </div>
+
+            <div style={{ background: 'var(--background)', padding: '0.875rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+              <p style={{ fontSize: '0.9375rem', fontWeight: 600, wordBreak: 'break-all' }}>{incomingTransfer.fileName}</p>
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                {incomingTransfer.fileSize < 1024 
+                  ? `${incomingTransfer.fileSize} B` 
+                  : incomingTransfer.fileSize < 1024 * 1024 
+                    ? `${(incomingTransfer.fileSize / 1024).toFixed(1)} KB` 
+                    : `${(incomingTransfer.fileSize / (1024 * 1024)).toFixed(2)} MB`}
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '0.5rem', flexWrap: 'wrap' }}>
+              <button 
+                onClick={() => {
+                  incomingTransfer.reject();
+                  setIncomingTransfer(null);
+                }} 
+                className="btn-secondary"
+                style={{ flex: 1, minWidth: '100px', flexShrink: 0 }}
+              >
+                {lang === 'en' ? 'Reject' : '拒絕'}
+              </button>
+              <button 
+                onClick={() => {
+                  incomingTransfer.accept();
+                  setIncomingTransfer(null);
+                }} 
+                className="btn-primary"
+                style={{ flex: 1, minWidth: '120px', flexShrink: 0 }}
+              >
+                {lang === 'en' ? 'Accept & Download' : '同意接收'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Global File Transfer Progress Toast ── */}
+      {transferProgress && (
+        <div style={{ position: 'fixed', bottom: '80px', right: '24px', background: 'var(--surface)', border: '2px solid var(--danger, #ef4444)', padding: '1.25rem', borderRadius: 'var(--radius-lg)', zIndex: 9999, width: '320px', boxShadow: '0 8px 24px rgba(239,68,68,0.2)' }}>
+          <p style={{ color: 'var(--danger, #ef4444)', fontWeight: 700, fontSize: '0.875rem', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            ⚠️ {lang === 'en' ? 'Do not close this page!' : '請勿關閉網頁！'}
+          </p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.875rem', fontWeight: 600 }}>
+            <span>{transferProgress.type === 'send' ? (lang === 'en' ? 'Sending File...' : '發送檔案中...') : (lang === 'en' ? 'Receiving File...' : '接收檔案中...')}</span>
+            <span>{transferProgress.percent}%</span>
+          </div>
+          <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: '12px' }}>{transferProgress.fileName}</p>
+          <div style={{ width: '100%', height: '8px', background: 'var(--border)', borderRadius: '4px', overflow: 'hidden' }}>
+            <div style={{ width: `${transferProgress.percent}%`, height: '100%', background: 'var(--danger, #ef4444)', transition: 'width 0.2s' }} />
+          </div>
+        </div>
+      )}
+
+      {/* ── Global File Transfer Complete Modal ── */}
+      {completedTransfer && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div style={{ background: 'var(--surface)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', width: '100%', maxWidth: '400px', display: 'flex', flexDirection: 'column', gap: '1rem', boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={{ padding: '10px', background: 'rgba(34,197,94,0.1)', color: '#22c55e', borderRadius: '50%' }}>
+                <CheckSquare size={24} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '1.125rem', fontWeight: 700 }}>{lang === 'en' ? 'Transfer Complete' : '傳送完成'}</h3>
+                <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>{completedTransfer.fileName}</p>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '0.5rem', flexWrap: 'wrap' }}>
+              <button 
+                onClick={() => setCompletedTransfer(null)} 
+                className="btn-secondary"
+                style={{ flex: 1, minWidth: '100px', flexShrink: 0 }}
+              >
+                {lang === 'en' ? 'Close' : '關閉'}
+              </button>
+              <button 
+                onClick={async () => {
+                  await saveFileToDisk(completedTransfer.fileName, completedTransfer.data);
+                  // Do not close immediately, user might need to click again if it failed on iPad
+                  // setCompletedTransfer(null); 
+                }} 
+                className="btn-primary"
+                style={{ flex: 1, minWidth: '120px', flexShrink: 0 }}
+              >
+                {lang === 'en' ? 'Save File' : '儲存檔案'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

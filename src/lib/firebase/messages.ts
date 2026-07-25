@@ -2,8 +2,7 @@ import {
   collection, doc, addDoc, updateDoc, getDoc, getDocs,
   onSnapshot, query, where, orderBy, limit, arrayUnion, writeBatch, deleteDoc
 } from 'firebase/firestore';
-import { ref, deleteObject } from 'firebase/storage';
-import { db, storage } from './config';
+import { db } from './config';
 import { Conversation, Message } from '../../types';
 import { useMessageStore } from '../../stores/messageStore';
 
@@ -50,13 +49,7 @@ export const subscribeToMessages = (conversationId: string) => {
   });
 };
 
-export const sendMessage = async (
-  conversationId: string, 
-  senderId: string, 
-  senderNickname: string, 
-  text: string,
-  fileData?: { fileUrl: string, fileName: string, fileSize: number, storagePath: string, fileType?: string }
-) => {
+export const sendMessage = async (conversationId: string, senderId: string, senderNickname: string, text: string) => {
   const now = Date.now();
   const messageData: Omit<Message, 'id'> = {
     conversationId,
@@ -65,15 +58,6 @@ export const sendMessage = async (
     text,
     createdAt: now,
     readBy: [senderId],
-    ...(fileData ? {
-      fileUrl: fileData.fileUrl,
-      fileName: fileData.fileName,
-      fileSize: fileData.fileSize,
-      storagePath: fileData.storagePath,
-      fileType: fileData.fileType,
-      downloadedBy: [],
-      isFileDeleted: false
-    } : {})
   };
 
   const batch = writeBatch(db);
@@ -93,46 +77,7 @@ export const sendMessage = async (
 };
 
 export const deleteMessage = async (messageId: string) => {
-  const msgRef = doc(db, 'messages', messageId);
-  const snap = await getDoc(msgRef);
-  if (snap.exists()) {
-    const msg = snap.data() as Message;
-    if (msg.storagePath && !msg.isFileDeleted) {
-      try {
-        await deleteObject(ref(storage, msg.storagePath));
-      } catch (err) {
-        console.error("Failed to delete file from storage during message deletion:", err);
-      }
-    }
-  }
-  await deleteDoc(msgRef);
-};
-
-export const markFileDownloaded = async (messageId: string, userId: string, conversationParticipants: string[]) => {
-  const msgRef = doc(db, 'messages', messageId);
-  const msgSnap = await getDoc(msgRef);
-  if (!msgSnap.exists()) return;
-  const msg = msgSnap.data() as Message;
-  if (msg.isFileDeleted || !msg.storagePath) return;
-
-  const newDownloadedBy = [...(msg.downloadedBy || [])];
-  if (!newDownloadedBy.includes(userId)) {
-    newDownloadedBy.push(userId);
-    await updateDoc(msgRef, { downloadedBy: newDownloadedBy });
-  }
-
-  // Check if everyone except the sender has downloaded it
-  const requiredDownloads = conversationParticipants.filter(p => p !== msg.senderId);
-  const allDownloaded = requiredDownloads.length > 0 && requiredDownloads.every(p => newDownloadedBy.includes(p));
-
-  if (allDownloaded) {
-    try {
-      await deleteObject(ref(storage, msg.storagePath));
-      await updateDoc(msgRef, { isFileDeleted: true, fileUrl: '' });
-    } catch (error) {
-      console.error("Failed to auto-delete file from storage:", error);
-    }
-  }
+  await deleteDoc(doc(db, 'messages', messageId));
 };
 
 export const deleteConversation = async (conversationId: string) => {
