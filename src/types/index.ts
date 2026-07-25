@@ -91,12 +91,15 @@ export interface FriendRequest {
 
 export interface Conversation {
   id: string;
-  participants: string[];    // [uid1, uid2]
+  participants: string[];    // [uid1, uid2, ...]
   participantNicknames: Record<string, string>;
   participantAvatars: Record<string, string | null>;
   lastMessage: string;
   lastMessageAt: number;
   createdAt: number;
+  isGroup?: boolean;
+  groupName?: string;
+  adminId?: string;
 }
 
 export interface Message {
@@ -107,5 +110,15 @@ export interface Message {
   text: string;
   createdAt: number;
   readBy: string[];
+}
+
+export interface WebRTCSignal {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  targetId: string;
+  type: 'offer' | 'answer' | 'candidate' | 'file-request' | 'file-accept' | 'file-reject';
+  data: any; // SDP string, ICE candidate object, or file metadata
+  createdAt: number;
 }
 

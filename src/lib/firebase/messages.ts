@@ -146,3 +146,51 @@ export const markMessagesAsRead = async (conversationId: string, userId: string,
 
   await batch.commit();
 };
+
+export const createGroupConversation = async (
+  creatorId: string,
+  creatorNickname: string,
+  creatorAvatar: string | null,
+  participantIds: string[], // excluding creator
+  participantProfiles: Record<string, { nickname: string; avatar: string | null }>,
+  groupName: string
+): Promise<string> => {
+  const allIds = [creatorId, ...participantIds];
+  const participantNicknames: Record<string, string> = { [creatorId]: creatorNickname };
+  const participantAvatars: Record<string, string | null> = { [creatorId]: creatorAvatar };
+
+  participantIds.forEach(id => {
+    participantNicknames[id] = participantProfiles[id].nickname;
+    participantAvatars[id] = participantProfiles[id].avatar;
+  });
+
+  const now = Date.now();
+  const convData: Omit<Conversation, 'id'> = {
+    participants: allIds,
+    participantNicknames,
+    participantAvatars,
+    lastMessage: '群組已建立',
+    lastMessageAt: now,
+    createdAt: now,
+    isGroup: true,
+    groupName,
+    adminId: creatorId
+  };
+
+  const ref = await addDoc(collection(db, 'conversations'), convData);
+  return ref.id;
+};
+
+export const updateGroupName = async (conversationId: string, newName: string, userId: string) => {
+  const convRef = doc(db, 'conversations', conversationId);
+  const convSnap = await getDoc(convRef);
+  
+  if (convSnap.exists()) {
+    const data = convSnap.data() as Conversation;
+    if (data.isGroup && data.adminId === userId) {
+      await updateDoc(convRef, { groupName: newName });
+    } else {
+      throw new Error('只有群組管理員可以修改名稱');
+    }
+  }
+};

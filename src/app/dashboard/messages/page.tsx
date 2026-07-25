@@ -3,7 +3,9 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuthStore } from '../../../stores/authStore';
 import { useMessageStore } from '../../../stores/messageStore';
 import { sendMessage, markMessagesAsRead, deleteMessage, subscribeToMessages } from '../../../lib/firebase/messages';
-import { Send, MessageSquare, Trash2, ArrowLeft } from 'lucide-react';
+import { Send, MessageSquare, Trash2, ArrowLeft, Users, Edit2, Paperclip, FileText, Check, X } from 'lucide-react';
+import { updateGroupName } from '../../../lib/firebase/messages';
+import { WebRTCManager } from '../../../lib/webrtc/webrtc';
 import { useTranslation } from '../../../lib/i18n';
 
 function ConversationItem({
@@ -60,8 +62,8 @@ function ConversationItem({
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-          <p style={{ fontWeight: 600, fontSize: '0.9375rem', color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {otherNickname}
+          <p style={{ fontWeight: 600, fontSize: '0.9375rem', color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            {conversation.isGroup && <Users size={14} />} {conversation.isGroup ? conversation.groupName : otherNickname}
           </p>
           <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', flexShrink: 0, marginLeft: '4px' }}>{date}</span>
         </div>
@@ -92,9 +94,37 @@ function MessagesContent() {
   const { t, lang } = useTranslation();
   const [inputText, setInputText] = useState('');
   const [hoveredMsgId, setHoveredMsgId] = useState<string | null>(null);
+  const [isEditingGroupName, setIsEditingGroupName] = useState(false);
+  const [newGroupName, setNewGroupName] = useState('');
+  const webrtcManagerRef = useRef<WebRTCManager | null>(null);
+  const [incomingFiles, setIncomingFiles] = useState<{senderId: string, fileName: string, fileSize: number, accept: () => void, reject: () => void}[]>([]);
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const unsubRef = useRef<(() => void) | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (user && activeConversationId) {
+      const manager = new WebRTCManager(user.uid, activeConversationId);
+      manager.onIncomingFileRequest = (senderId, fileName, fileSize, accept, reject) => {
+        setIncomingFiles(prev => [...prev, {senderId, fileName, fileSize, accept, reject}]);
+      };
+      manager.onFileReceived = (senderId, fileName, data) => {
+        const url = URL.createObjectURL(data);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        a.click();
+        URL.revokeObjectURL(url);
+      };
+      webrtcManagerRef.current = manager;
+    }
+    return () => {
+      webrtcManagerRef.current?.closeAll();
+      webrtcManagerRef.current = null;
+      setIncomingFiles([]);
+    };
+  }, [activeConversationId, user]);
 
   const [listWidth, setListWidth] = useState(280);
   const isResizing = useRef(false);
@@ -269,9 +299,33 @@ function MessagesContent() {
           <>
             {/* Chat Header */}
             {activeConversation && (() => {
-              const otherId = activeConversation.participants.find(id => id !== user.uid) || '';
-              const otherName = user.friendNicknames?.[otherId] || activeConversation.participantNicknames[otherId] || t('friends.unknownUser');
-              const otherAvatar = activeConversation.participantAvatars?.[otherId];
+              const isGroup = activeConversation.isGroup;
+              const displayName = isGroup ? activeConversation.groupName : (
+                (() => {
+                  const otherId = activeConversation.participants.find(id => id !== user.uid) || '';
+                  return user.friendNicknames?.[otherId] || activeConversation.participantNicknames[otherId] || t('friends.unknownUser');
+                })()
+              );
+              const displayAvatar = isGroup ? null : (
+                (() => {
+                  const otherId = activeConversation.participants.find(id => id !== user.uid) || '';
+                  return activeConversation.participantAvatars?.[otherId];
+                })()
+              );
+              
+              const handleUpdateGroupName = async () => {
+                if (!newGroupName.trim() || newGroupName === activeConversation.groupName) {
+                  setIsEditingGroupName(false);
+                  return;
+                }
+                try {
+                  await updateGroupName(activeConversation.id, newGroupName.trim(), user.uid);
+                  setIsEditingGroupName(false);
+                } catch (err: any) {
+                  alert(err.message);
+                }
+              };
+
               return (
                 <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--border)', background: 'var(--surface)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                   <button 
@@ -281,17 +335,63 @@ function MessagesContent() {
                   >
                     <ArrowLeft size={20} />
                   </button>
-                  <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '1rem', flexShrink: 0 }}>
-                    {otherAvatar ? (
-                      <img src={otherAvatar} alt={otherName} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                  <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '1rem', flexShrink: 0, overflow: 'hidden' }}>
+                    {isGroup ? <Users size={20} /> : displayAvatar ? (
+                      <img src={displayAvatar} alt={displayName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (
-                      otherName.charAt(0).toUpperCase()
+                      displayName?.charAt(0).toUpperCase()
                     )}
                   </div>
-                  <p style={{ fontWeight: 700, fontSize: '1rem' }}>{otherName}</p>
+                  
+                  {isEditingGroupName ? (
+                    <div style={{ display: 'flex', gap: '8px', flex: 1, alignItems: 'center' }}>
+                      <input 
+                        type="text" 
+                        value={newGroupName} 
+                        onChange={e => setNewGroupName(e.target.value)}
+                        autoFocus
+                        style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--border)' }}
+                      />
+                      <button onClick={handleUpdateGroupName} style={{ color: 'var(--primary)' }}><Check size={18} /></button>
+                      <button onClick={() => setIsEditingGroupName(false)} style={{ color: 'var(--text-muted)' }}><X size={18} /></button>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flex: 1 }}>
+                      <p style={{ fontWeight: 700, fontSize: '1rem' }}>{displayName}</p>
+                      {isGroup && activeConversation.adminId === user.uid && (
+                        <button 
+                          onClick={() => { setNewGroupName(activeConversation.groupName || ''); setIsEditingGroupName(true); }}
+                          style={{ color: 'var(--text-muted)', padding: '4px' }}
+                        >
+                          <Edit2 size={14} />
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })()}
+
+            {/* Incoming File Requests UI */}
+            {incomingFiles.length > 0 && (
+              <div style={{ padding: '12px 24px', background: 'var(--surface-hover)', borderBottom: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {incomingFiles.map((file, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--background)', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <FileText size={18} color="var(--primary)" />
+                      <div>
+                        <p style={{ fontSize: '0.875rem', fontWeight: 600 }}>{file.fileName}</p>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{(file.fileSize / 1024).toFixed(1)} KB (P2P Transfer)</p>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button onClick={() => { file.accept(); setIncomingFiles(prev => prev.filter((_, idx) => idx !== i)); }} className="btn-primary" style={{ padding: '4px 12px', fontSize: '0.875rem' }}>{lang === 'en' ? 'Accept' : '接收'}</button>
+                      <button onClick={() => { file.reject(); setIncomingFiles(prev => prev.filter((_, idx) => idx !== i)); }} className="btn-secondary" style={{ padding: '4px 12px', fontSize: '0.875rem' }}>{lang === 'en' ? 'Reject' : '拒絕'}</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* Messages Area */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -355,7 +455,23 @@ function MessagesContent() {
 
             {/* Input Area */}
             <div style={{ padding: '1rem 1.5rem', background: 'var(--surface)', borderTop: '1px solid var(--border)' }}>
-              <form onSubmit={handleSend} style={{ display: 'flex', gap: '0.75rem' }}>
+              <form onSubmit={handleSend} style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                <label style={{ cursor: 'pointer', color: 'var(--text-muted)', padding: '8px' }} title="Send P2P File">
+                  <Paperclip size={20} />
+                  <input type="file" style={{ display: 'none' }} onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file && webrtcManagerRef.current && activeConversation) {
+                      // Basic implementation: initiate to first other participant.
+                      // For a complete group logic, we would initiate to all online participants.
+                      const targetId = activeConversation.participants.find(id => id !== user.uid);
+                      if (targetId) {
+                        webrtcManagerRef.current.initiateConnection(targetId);
+                        alert((lang === 'en' ? 'Requesting transfer for: ' : '要求傳送：') + file.name + '\n' + (lang === 'en' ? 'Waiting for recipient...' : '等待對方接收...'));
+                      }
+                    }
+                    e.target.value = '';
+                  }} />
+                </label>
                 <input
                   type="text"
                   value={inputText}
