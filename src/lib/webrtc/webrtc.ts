@@ -66,7 +66,7 @@ export class WebRTCManager {
           senderId: this.currentUserId,
           targetId,
           type: 'candidate',
-          data: event.candidate
+          data: event.candidate.toJSON()
         });
       }
     };
