@@ -12,7 +12,7 @@ import {
   LogOut, User, MessageSquare, Settings, FileText
 } from 'lucide-react';
 import { subscribeToSignals } from '../../lib/firebase/signaling';
-import { WebRTCManager } from '../../lib/webrtc/webrtc';
+import { getWebRTCManager, saveFileToDisk } from '../../lib/webrtc/webrtc';
 
 const navItems = [
   { href: '/dashboard/calendar', key: 'nav.calendar', icon: Calendar },
@@ -102,17 +102,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     if (!user) return;
 
-    const manager = new WebRTCManager(user.uid);
+    const manager = getWebRTCManager(user.uid);
     manager.onIncomingFileRequest = (senderId, conversationId, fileName, fileSize, accept, reject) => {
       setIncomingTransfer({ senderId, conversationId, fileName, fileSize, accept, reject });
     };
-    manager.onFileReceived = (senderId, fileName, data) => {
-      const url = URL.createObjectURL(data);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      a.click();
-      URL.revokeObjectURL(url);
+    manager.onFileReceived = async (senderId, fileName, data) => {
+      await saveFileToDisk(fileName, data);
       setTransferProgress(null);
     };
     manager.onProgress = (type, percent, fileName) => {
@@ -129,7 +124,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
     return () => {
       unsub();
-      manager.closeAll();
     };
   }, [user?.uid]);
 

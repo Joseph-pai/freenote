@@ -5,7 +5,7 @@ import { useMessageStore } from '../../../stores/messageStore';
 import { useFriendStore } from '../../../stores/friendStore';
 import { sendMessage, markMessagesAsRead, deleteMessage, subscribeToMessages, createGroupConversation, updateGroupName, addGroupParticipants, removeGroupParticipant, updateGroupMemberNickname } from '../../../lib/firebase/messages';
 import { Send, MessageSquare, Trash2, ArrowLeft, Users, Edit2, Paperclip, FileText, Check, X, Plus, Settings, UserPlus, UserMinus } from 'lucide-react';
-import { WebRTCManager } from '../../../lib/webrtc/webrtc';
+import { getWebRTCManager, saveFileToDisk } from '../../../lib/webrtc/webrtc';
 import { useTranslation } from '../../../lib/i18n';
 
 function ConversationItem({
@@ -118,22 +118,16 @@ function MessagesContent() {
 
   useEffect(() => {
     if (user && activeConversationId) {
-      const manager = new WebRTCManager(user.uid);
+      const manager = getWebRTCManager(user.uid);
       manager.onIncomingFileRequest = (senderId, conversationId, fileName, fileSize, accept, reject) => {
         setIncomingFiles(prev => [...prev, {senderId, fileName, fileSize, accept, reject}]);
       };
-      manager.onFileReceived = (senderId, fileName, data) => {
-        const url = URL.createObjectURL(data);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        a.click();
-        URL.revokeObjectURL(url);
+      manager.onFileReceived = async (senderId, fileName, data) => {
+        await saveFileToDisk(fileName, data);
       };
       webrtcManagerRef.current = manager;
     }
     return () => {
-      webrtcManagerRef.current?.closeAll();
       webrtcManagerRef.current = null;
       setIncomingFiles([]);
     };

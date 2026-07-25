@@ -1,7 +1,7 @@
 import { sendSignal } from '../firebase/signaling';
 
 export interface PendingFileRequest {
-  id: string; // signal ID or unique ID
+  id: string;
   senderId: string;
   senderName?: string;
   fileName: string;
@@ -32,6 +32,10 @@ export class WebRTCManager {
 
   constructor(currentUserId: string) {
     this.currentUserId = currentUserId;
+  }
+
+  public getCurrentUserId() {
+    return this.currentUserId;
   }
 
   private createPeerConnection(targetId: string, conversationId: string) {
@@ -211,7 +215,6 @@ export class WebRTCManager {
         if (!e.target?.result) return;
         const buffer = e.target.result as ArrayBuffer;
 
-        // Low water mark flow control if needed, or simple send
         dc.send(buffer);
         offset += buffer.byteLength;
 
@@ -221,10 +224,8 @@ export class WebRTCManager {
         }
 
         if (offset < file.size) {
-          // Send next chunk
           setTimeout(() => readSlice(offset), 5);
         } else {
-          // Send EOF
           dc.send(JSON.stringify({ type: 'EOF', fileName: file.name, fileSize: file.size }));
         }
       };
@@ -243,3 +244,41 @@ export class WebRTCManager {
     this.pendingFilesToSend.clear();
   }
 }
+
+let activeWebRTCManagerInstance: WebRTCManager | null = null;
+
+export const getWebRTCManager = (userId: string): WebRTCManager => {
+  if (!activeWebRTCManagerInstance || activeWebRTCManagerInstance.getCurrentUserId() !== userId) {
+    if (activeWebRTCManagerInstance) {
+      activeWebRTCManagerInstance.closeAll();
+    }
+    activeWebRTCManagerInstance = new WebRTCManager(userId);
+  }
+  return activeWebRTCManagerInstance;
+};
+
+export const saveFileToDisk = async (fileName: string, data: Blob) => {
+  if (typeof window !== 'undefined' && 'showSaveFilePicker' in window) {
+    try {
+      const handle = await (window as any).showSaveFilePicker({
+        suggestedName: fileName
+      });
+      const writable = await handle.createWritable();
+      await writable.write(data);
+      await writable.close();
+      return;
+    } catch (err: any) {
+      if (err.name === 'AbortError') {
+        return; // User cancelled
+      }
+    }
+  }
+
+  // Fallback
+  const url = URL.createObjectURL(data);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  a.click();
+  URL.revokeObjectURL(url);
+};
