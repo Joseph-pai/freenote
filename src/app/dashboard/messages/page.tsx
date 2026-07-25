@@ -111,6 +111,7 @@ function MessagesContent() {
   
   const webrtcManagerRef = useRef<WebRTCManager | null>(null);
   const [incomingFiles, setIncomingFiles] = useState<{senderId: string, fileName: string, fileSize: number, accept: () => void, reject: () => void}[]>([]);
+  const [completedLocalFiles, setCompletedLocalFiles] = useState<{fileName: string, data: Blob}[]>([]);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const unsubRef = useRef<(() => void) | null>(null);
@@ -123,7 +124,7 @@ function MessagesContent() {
         setIncomingFiles(prev => [...prev, {senderId, fileName, fileSize, accept, reject}]);
       };
       manager.onFileReceived = async (senderId, fileName, data) => {
-        await saveFileToDisk(fileName, data);
+        setCompletedLocalFiles(prev => [...prev, {fileName, data}]);
       };
       webrtcManagerRef.current = manager;
     }
@@ -451,12 +452,42 @@ function MessagesContent() {
                       <FileText size={18} color="var(--primary)" />
                       <div>
                         <p style={{ fontSize: '0.875rem', fontWeight: 600 }}>{file.fileName}</p>
-                        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{(file.fileSize / 1024).toFixed(1)} KB (P2P Transfer)</p>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                          {file.fileSize < 1024 
+                            ? `${file.fileSize} B` 
+                            : file.fileSize < 1024 * 1024 
+                              ? `${(file.fileSize / 1024).toFixed(1)} KB` 
+                              : `${(file.fileSize / (1024 * 1024)).toFixed(2)} MB`} (P2P Transfer)
+                        </p>
                       </div>
                     </div>
                     <div style={{ display: 'flex', gap: '8px' }}>
-                      <button onClick={() => { file.accept(); setIncomingFiles(prev => prev.filter((_, idx) => idx !== i)); }} className="btn-primary" style={{ padding: '4px 12px', fontSize: '0.875rem' }}>{lang === 'en' ? 'Accept' : '接收'}</button>
-                      <button onClick={() => { file.reject(); setIncomingFiles(prev => prev.filter((_, idx) => idx !== i)); }} className="btn-secondary" style={{ padding: '4px 12px', fontSize: '0.875rem' }}>{lang === 'en' ? 'Reject' : '拒絕'}</button>
+                      <button onClick={() => { file.accept(); setIncomingFiles(prev => prev.filter((_, idx) => idx !== i)); }} className="btn-primary" style={{ padding: '4px 12px', fontSize: '0.875rem', whiteSpace: 'nowrap', minWidth: '70px' }}>{lang === 'en' ? 'Accept' : '接收'}</button>
+                      <button onClick={() => { file.reject(); setIncomingFiles(prev => prev.filter((_, idx) => idx !== i)); }} className="btn-secondary" style={{ padding: '4px 12px', fontSize: '0.875rem', whiteSpace: 'nowrap', minWidth: '70px' }}>{lang === 'en' ? 'Reject' : '拒絕'}</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {/* Local File Transfer Complete UI */}
+            {completedLocalFiles.length > 0 && (
+              <div style={{ padding: '12px 24px', background: 'rgba(34,197,94,0.05)', borderBottom: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {completedLocalFiles.map((file, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--background)', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Check size={18} color="#22c55e" />
+                      <div>
+                        <p style={{ fontSize: '0.875rem', fontWeight: 600 }}>{file.fileName}</p>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{lang === 'en' ? 'Transfer complete' : '傳送完成'}</p>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button onClick={() => setCompletedLocalFiles(prev => prev.filter((_, idx) => idx !== i))} className="btn-secondary" style={{ padding: '4px 12px', fontSize: '0.875rem', whiteSpace: 'nowrap', minWidth: '70px' }}>{lang === 'en' ? 'Close' : '關閉'}</button>
+                      <button onClick={async () => {
+                        await saveFileToDisk(file.fileName, file.data);
+                        setCompletedLocalFiles(prev => prev.filter((_, idx) => idx !== i));
+                      }} className="btn-primary" style={{ padding: '4px 12px', fontSize: '0.875rem', whiteSpace: 'nowrap', minWidth: '80px' }}>{lang === 'en' ? 'Save File' : '儲存檔案'}</button>
                     </div>
                   </div>
                 ))}

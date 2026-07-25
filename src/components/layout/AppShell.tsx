@@ -284,7 +284,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
             <div style={{ background: 'var(--background)', padding: '0.875rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
               <p style={{ fontSize: '0.9375rem', fontWeight: 600, wordBreak: 'break-all' }}>{incomingTransfer.fileName}</p>
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>{(incomingTransfer.fileSize / (1024 * 1024)).toFixed(2)} MB</p>
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                {incomingTransfer.fileSize < 1024 
+                  ? `${incomingTransfer.fileSize} B` 
+                  : incomingTransfer.fileSize < 1024 * 1024 
+                    ? `${(incomingTransfer.fileSize / 1024).toFixed(1)} KB` 
+                    : `${(incomingTransfer.fileSize / (1024 * 1024)).toFixed(2)} MB`}
+              </p>
             </div>
 
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
