@@ -12,7 +12,7 @@ import {
   LogOut, User, MessageSquare, Settings, FileText
 } from 'lucide-react';
 import { subscribeToSignals } from '../../lib/firebase/signaling';
-import { getWebRTCManager, saveFileToDisk } from '../../lib/webrtc/webrtc';
+import { getWebRTCManager, saveFileToDisk, WebRTCManager } from '../../lib/webrtc/webrtc';
 
 const navItems = [
   { href: '/dashboard/calendar', key: 'nav.calendar', icon: Calendar },
