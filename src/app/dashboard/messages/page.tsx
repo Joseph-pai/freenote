@@ -5,7 +5,7 @@ import { useMessageStore } from '../../../stores/messageStore';
 import { useFriendStore } from '../../../stores/friendStore';
 import { sendMessage, markMessagesAsRead, deleteMessage, subscribeToMessages, createGroupConversation, updateGroupName, addGroupParticipants, removeGroupParticipant, updateGroupMemberNickname } from '../../../lib/firebase/messages';
 import { Send, MessageSquare, Trash2, ArrowLeft, Users, Edit2, Paperclip, FileText, Check, X, Plus, Settings, UserPlus, UserMinus } from 'lucide-react';
-import { getWebRTCManager, saveFileToDisk } from '../../../lib/webrtc/webrtc';
+import { getWebRTCManager, saveFileToDisk, WebRTCManager } from '../../../lib/webrtc/webrtc';
 import { useTranslation } from '../../../lib/i18n';
 
 function ConversationItem({
