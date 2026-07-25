@@ -118,8 +118,8 @@ function MessagesContent() {
 
   useEffect(() => {
     if (user && activeConversationId) {
-      const manager = new WebRTCManager(user.uid, activeConversationId);
-      manager.onIncomingFileRequest = (senderId, fileName, fileSize, accept, reject) => {
+      const manager = new WebRTCManager(user.uid);
+      manager.onIncomingFileRequest = (senderId, conversationId, fileName, fileSize, accept, reject) => {
         setIncomingFiles(prev => [...prev, {senderId, fileName, fileSize, accept, reject}]);
       };
       manager.onFileReceived = (senderId, fileName, data) => {
