@@ -83,7 +83,7 @@ export default function CalendarPage() {
 
   return (
     <CalendarProvider>
-      <div style={{ width: '100%', minHeight: '100%', display: 'flex', flexDirection: 'column', margin: '0 auto' }}>
+      <div style={{ width: '100%', display: 'flex', flexDirection: 'column', margin: '0 auto' }}>
 
         {/* ── Header ── */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
@@ -115,7 +115,7 @@ export default function CalendarPage() {
       </div>
 
       {/* ── Calendar Grid ── */}
-      <div style={{ minHeight: '560px', display: 'flex', flexDirection: 'column', background: 'var(--surface)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', background: 'var(--surface)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)' }}>
         {/* Weekday headers */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', background: 'var(--border)' }}>
           {WEEKDAYS.map((w, i) => (
@@ -126,7 +126,7 @@ export default function CalendarPage() {
         </div>
 
         {/* Day cells */}
-        <div style={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gridAutoRows: '90px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gridAutoRows: 'minmax(85px, auto)' }}>
           {days.map((day, idx) => {
             if (day === null) {
               return <div key={`empty-${idx}`} style={{ borderTop: '1px solid var(--border)', borderRight: idx % 7 !== 6 ? '1px solid var(--border)' : 'none', background: 'var(--background)', opacity: 0.4 }} />;
