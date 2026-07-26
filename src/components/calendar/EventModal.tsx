@@ -116,7 +116,7 @@ export function EventModal({ event, defaultDate, onClose }: EventModalProps) {
           </div>
 
           <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
-            <button type="submit" className="btn-primary" disabled={saving}>
+            <button type="submit" className="btn-primary" disabled={saving} style={{ flex: 1 }}>
               {saving ? t('event.saving') : isEdit ? t('event.update') : t('event.add')}
             </button>
             <button type="button" onClick={onClose} style={{ padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-main)', fontWeight: 600, flex: 1 }}>

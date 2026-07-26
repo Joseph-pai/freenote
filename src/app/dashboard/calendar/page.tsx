@@ -106,7 +106,7 @@ export default function CalendarPage() {
         </div>
         <button
           id="add-event-btn"
-          onClick={() => { setEditingEvent(null); setSelectedDay(today); setShowModal(true); }}
+          onClick={() => { setEditingEvent(null); if (!selectedDay) setSelectedDay(today); setShowModal(true); }}
           className="btn-primary"
           style={{ width: 'auto', padding: '0.5rem 1rem', gap: '0.375rem' }}
         >
