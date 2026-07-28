@@ -47,8 +47,10 @@ const withPWA = require('next-pwa')({
 
 const nextConfig: NextConfig = {
   output: 'export',
-  turbopack: {},
-  // Netlify manual deployment using out directory
+  // NOTE: turbopack is removed intentionally.
+  // next-pwa v5 uses a Webpack plugin (WorkboxPlugin) to generate sw.js.
+  // Turbopack does NOT run Webpack plugins, so enabling it prevents sw.js
+  // from being generated, breaking PWA installation and offline support.
 };
 
 export default withPWA(nextConfig);
