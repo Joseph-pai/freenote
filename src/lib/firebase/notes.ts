@@ -27,15 +27,44 @@ export const subscribeToNotes = (userId: string) => {
   let sharedNotes: Note[] = [];
 
   const updateStore = async () => {
+    // Snapshot of current store state — needed to detect local-only changes
+    const { notes: currentNotes } = useNoteStore.getState();
+
     const map = new Map<string, Note>();
     ownedNotes.forEach(n => map.set(n.id, n));
     sharedNotes.forEach(n => map.set(n.id, n));
-    
+
+    // ── Fix 1: Preserve pending local notes ──────────────────────────────
+    // When addDoc() fails (offline / permission denied), createNote() creates
+    // a temp 'local_note_*' entry via addNote(). A subsequent onSnapshot()
+    // call would wipe it via setNotes(). Keep local-only notes in the map
+    // so the editor doesn't collapse after clicking "Add Note".
+    currentNotes
+      .filter(n => n.id.startsWith('local_note_'))
+      .forEach(n => { if (!map.has(n.id)) map.set(n.id, n); });
+
+    // ── Fix 2: Respect locally-deleted notes ─────────────────────────────
+    // When updateDoc(deletedAt) fails, deleteNote() still calls removeNote()
+    // so the note leaves the local store. But Firestore's snapshot still
+    // returns it (deletedAt == null there). Check IDB: if the IDB record has
+    // deletedAt set, the delete is pending sync — exclude the note from the
+    // displayed list to prevent it from "coming back" after deletion.
+    const currentIds = new Set(currentNotes.map(n => n.id));
+    const restoredByFirestore = [...map.values()].filter(
+      n => !n.id.startsWith('local_note_') && !currentIds.has(n.id)
+    );
+    for (const note of restoredByFirestore) {
+      const idbNote = await idbGetNote(note.id);
+      if (idbNote?.deletedAt) {
+        map.delete(note.id);
+      }
+    }
+
     const all = Array.from(map.values()).sort((a, b) => {
       if (a.pinned === b.pinned) return b.updatedAt - a.updatedAt;
       return a.pinned ? -1 : 1;
     });
-    
+
     setNotes(all);
     for (const note of all) await idbPutNote(note);
   };
