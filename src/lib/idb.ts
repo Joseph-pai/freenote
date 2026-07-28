@@ -63,6 +63,11 @@ export const idbGetAllNotes = async (userId: string) => {
   return all.filter((n) => !n.deletedAt);
 };
 
+export const idbGetNote = async (id: string) => {
+  const db = await getDB();
+  return db.get('notes', id) as Promise<any | undefined>;
+};
+
 export const idbPutNote = async (note: any) => {
   const db = await getDB();
   await db.put('notes', note);

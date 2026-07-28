@@ -2,6 +2,8 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   GoogleAuthProvider,
   signOut,
   sendPasswordResetEmail,
@@ -13,8 +15,26 @@ import { auth, db } from './config';
 import { AppUser } from '../../types';
 import { useAuthStore } from '../../stores/authStore';
 
+/** Returns true when the app is running as an installed PWA (standalone mode). */
+const isPWAStandalone = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  return window.matchMedia('(display-mode: standalone)').matches ||
+    (window.navigator as any).standalone === true;
+};
+
 // Initialize auth state listener
 export const initAuthListener = () => {
+  // Handle the result of signInWithRedirect (PWA mode Google login).
+  // Must be called once on app start so the auth state resolves after redirect.
+  if (isPWAStandalone()) {
+    getRedirectResult(auth).catch((error) => {
+      // Ignore "no pending redirect" — it just means the user didn't come from a redirect.
+      if (error?.code !== 'auth/no-current-user') {
+        console.warn('getRedirectResult error:', error);
+      }
+    });
+  }
+
   return onAuthStateChanged(auth, async (firebaseUser) => {
     const { setUser, setLoading } = useAuthStore.getState();
     
@@ -63,6 +83,15 @@ export const logout = async () => {
 export const loginWithGoogle = async () => {
   try {
     const provider = new GoogleAuthProvider();
+
+    if (isPWAStandalone()) {
+      // PWA standalone mode: popups are blocked by Safari/Chrome on Mac/iOS.
+      // Use redirect-based flow instead — onAuthStateChanged handles the result.
+      await signInWithRedirect(auth, provider);
+      return; // Page will reload; auth state resolved in initAuthListener
+    }
+
+    // Regular browser: use popup as before
     const result = await signInWithPopup(auth, provider);
     const userDoc = await getDoc(doc(db, 'users', result.user.uid));
     
@@ -141,4 +170,3 @@ export const updateUserProfile = async (uid: string, updates: Partial<AppUser>) 
     throw error;
   }
 };
-

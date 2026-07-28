@@ -3,6 +3,7 @@
   "short_name": "FreeNote",
   "description": "Cross-platform task, note, and calendar manager.",
   "start_url": "/dashboard/tasks",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#2563eb",

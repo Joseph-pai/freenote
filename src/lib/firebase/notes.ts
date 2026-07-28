@@ -5,7 +5,7 @@ import {
 import { db } from './config';
 import { Note, SyncQueueItem } from '../../types';
 import { useNoteStore } from '../../stores/noteStore';
-import { idbPutNote, idbGetAllNotes, idbEnqueue } from '../idb';
+import { idbPutNote, idbGetNote, idbGetAllNotes, idbEnqueue } from '../idb';
 
 export const subscribeToNotes = (userId: string) => {
   const { setNotes, setLoading } = useNoteStore.getState();
@@ -94,10 +94,14 @@ export const updateNote = async (id: string, updates: Partial<Note>) => {
   const updatedData = { ...updates, updatedAt: Date.now() };
   try {
     await updateDoc(doc(db, 'notes', id), updatedData);
-    await idbPutNote({ id, ...updatedData });
+    // Merge with existing IDB record to preserve all fields
+    const existing = await idbGetNote(id);
+    await idbPutNote({ ...(existing ?? {}), id, ...updatedData });
     useNoteStore.getState().updateNote(id, updatedData);
   } catch {
-    await idbPutNote({ id, ...updatedData });
+    // Offline or SW-blocked: merge with existing IDB record before saving
+    const existing = await idbGetNote(id);
+    await idbPutNote({ ...(existing ?? {}), id, ...updatedData });
     useNoteStore.getState().updateNote(id, updatedData);
     const queueItem: SyncQueueItem = {
       id: `upd_note_${id}_${Date.now()}`, operation: 'update',
