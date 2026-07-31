@@ -10,7 +10,7 @@ import { NoteProvider } from '../../../components/notes/NoteProvider';
 import { ShareModal } from '../../../components/shared/ShareModal';
 import { Plus, Pin, PinOff, Trash2, Eye, Pencil, Search, Users, ArrowLeft } from 'lucide-react';
 import { useTranslation } from '../../../lib/i18n';
-import { showConfirm } from '../../../stores/dialogStore';
+import { showConfirm, showAlert } from '../../../stores/dialogStore';
 
 // ── Auto-save hook ──────────────────────────────────────────
 function useAutoSave(noteId: string | null, title: string, content: string, defaultTitle: string) {
@@ -139,11 +139,16 @@ export default function NotesPage() {
 
   const handleNewNote = useCallback(async () => {
     if (!user) return;
-    const note = await createNote(user.uid, {
-      title: '', content: '', pinned: false, tags: [], sharedWith: {}, sharedUserIds: [],
-    });
-    setActiveNoteId(note.id);
-  }, [user, setActiveNoteId]);
+    try {
+      const note = await createNote(user.uid, {
+        title: '', content: '', pinned: false, tags: [], sharedWith: {}, sharedUserIds: [],
+      });
+      setActiveNoteId(note.id);
+    } catch (err: any) {
+      console.error('Failed to create note:', err);
+      showAlert((lang === 'en' ? 'Failed to create note: ' : '新增記事失敗: ') + err.message);
+    }
+  }, [user, setActiveNoteId, lang]);
 
   const handlePin = async () => {
     if (!activeNote) return;

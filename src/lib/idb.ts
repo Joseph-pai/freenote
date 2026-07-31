@@ -39,74 +39,131 @@ export const getDB = () => {
   return dbPromise;
 };
 
-// Tasks
+// --- Tasks ---
 export const idbGetAllTasks = async (userId: string) => {
-  const db = await getDB();
-  const all = await db.getAllFromIndex('tasks', 'userId', userId);
-  return all.filter((t) => !t.deletedAt);
+  try {
+    const db = await getDB();
+    const all = await db.getAllFromIndex('tasks', 'userId', userId);
+    return all.filter((t) => !t.deletedAt);
+  } catch (err) {
+    console.warn('IDB getAllTasks failed:', err);
+    return [];
+  }
 };
 
 export const idbPutTask = async (task: any) => {
-  const db = await getDB();
-  await db.put('tasks', task);
+  try {
+    const db = await getDB();
+    await db.put('tasks', task);
+  } catch (err) {
+    console.warn('IDB putTask failed:', err);
+  }
 };
 
 export const idbDeleteTask = async (id: string) => {
-  const db = await getDB();
-  await db.delete('tasks', id);
+  try {
+    const db = await getDB();
+    await db.delete('tasks', id);
+  } catch (err) {
+    console.warn('IDB deleteTask failed:', err);
+  }
 };
 
-// Notes
+// --- Notes ---
 export const idbGetAllNotes = async (userId: string) => {
-  const db = await getDB();
-  const all = await db.getAllFromIndex('notes', 'userId', userId);
-  return all.filter((n) => !n.deletedAt);
+  try {
+    const db = await getDB();
+    const all = await db.getAllFromIndex('notes', 'userId', userId);
+    return all.filter((n) => !n.deletedAt);
+  } catch (err) {
+    console.warn('IDB getAllNotes failed:', err);
+    return [];
+  }
 };
 
 export const idbGetNote = async (id: string) => {
-  const db = await getDB();
-  return db.get('notes', id) as Promise<any | undefined>;
+  try {
+    const db = await getDB();
+    return db.get('notes', id) as Promise<any | undefined>;
+  } catch (err) {
+    console.warn('IDB getNote failed:', err);
+    return undefined;
+  }
 };
 
 export const idbPutNote = async (note: any) => {
-  const db = await getDB();
-  await db.put('notes', note);
+  try {
+    const db = await getDB();
+    await db.put('notes', note);
+  } catch (err) {
+    console.warn('IDB putNote failed:', err);
+  }
 };
 
 export const idbDeleteNote = async (id: string) => {
-  const db = await getDB();
-  await db.delete('notes', id);
+  try {
+    const db = await getDB();
+    await db.delete('notes', id);
+  } catch (err) {
+    console.warn('IDB deleteNote failed:', err);
+  }
 };
 
-// Events
+// --- Events ---
 export const idbGetAllEvents = async (userId: string) => {
-  const db = await getDB();
-  const all = await db.getAllFromIndex('events', 'userId', userId);
-  return all.filter((e) => !e.deletedAt);
+  try {
+    const db = await getDB();
+    const all = await db.getAllFromIndex('events', 'userId', userId);
+    return all.filter((e) => !e.deletedAt);
+  } catch (err) {
+    console.warn('IDB getAllEvents failed:', err);
+    return [];
+  }
 };
 
 export const idbPutEvent = async (event: any) => {
-  const db = await getDB();
-  await db.put('events', event);
+  try {
+    const db = await getDB();
+    await db.put('events', event);
+  } catch (err) {
+    console.warn('IDB putEvent failed:', err);
+  }
 };
 
 export const idbDeleteEvent = async (id: string) => {
-  const db = await getDB();
-  await db.delete('events', id);
+  try {
+    const db = await getDB();
+    await db.delete('events', id);
+  } catch (err) {
+    console.warn('IDB deleteEvent failed:', err);
+  }
 };
 
-// Sync Queue
+// --- Sync Queue ---
 export const idbEnqueue = async (item: SyncQueueItem) => {
-  const db = await getDB();
-  await db.put('syncQueue', item);
+  try {
+    const db = await getDB();
+    await db.put('syncQueue', item);
+  } catch (err) {
+    console.warn('IDB enqueue failed:', err);
+  }
 };
 
 export const idbGetQueue = async (): Promise<SyncQueueItem[]> => {
-  const db = await getDB();
-  return db.getAll('syncQueue');
+  try {
+    const db = await getDB();
+    return db.getAll('syncQueue');
+  } catch (err) {
+    console.warn('IDB getQueue failed:', err);
+    return [];
+  }
 };
 
 export const idbDequeue = async (id: string) => {
-  const db = await getDB();
-  await db.delete('syncQueue', id);
+  try {
+    const db = await getDB();
+    await db.delete('syncQueue', id);
+  } catch (err) {
+    console.warn('IDB dequeue failed:', err);
+  }
 };
