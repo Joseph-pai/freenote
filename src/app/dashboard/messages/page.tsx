@@ -7,6 +7,7 @@ import { sendMessage, markMessagesAsRead, deleteMessage, subscribeToMessages, cr
 import { Send, MessageSquare, Trash2, ArrowLeft, Users, Edit2, Paperclip, FileText, Check, X, Plus, Settings, UserPlus, UserMinus } from 'lucide-react';
 import { getWebRTCManager, saveFileToDisk, WebRTCManager } from '../../../lib/webrtc/webrtc';
 import { useTranslation } from '../../../lib/i18n';
+import { showConfirm, showAlert } from '../../../stores/dialogStore';
 
 function ConversationItem({
   conversation,
@@ -206,16 +207,16 @@ function MessagesContent() {
       await sendMessage(activeConversationId, user.uid, user.nickname || t('friends.unknownUser'), inputText.trim());
       setInputText('');
     } catch (err: any) {
-      alert((lang === 'en' ? 'Failed to send: ' : '發送失敗: ') + err.message);
+      showAlert((lang === 'en' ? 'Failed to send: ' : '發送失敗: ') + err.message);
     }
   };
 
   const handleDeleteMessage = async (msgId: string) => {
-    if (!confirm(lang === 'en' ? 'Are you sure you want to delete this message?' : '確定要刪除這則訊息嗎？')) return;
+    if (!await showConfirm(lang === 'en' ? 'Are you sure you want to delete this message?' : '確定要刪除這則訊息嗎？')) return;
     try {
       await deleteMessage(msgId);
     } catch (err: any) {
-      alert((lang === 'en' ? 'Delete failed: ' : '刪除失敗: ') + err.message);
+      showAlert((lang === 'en' ? 'Delete failed: ' : '刪除失敗: ') + err.message);
     }
   };
 
@@ -247,7 +248,7 @@ function MessagesContent() {
       setSelectedFriendIds([]);
       setActiveConversationId(newConvId);
     } catch (err: any) {
-      alert(err.message);
+      showAlert(err.message);
     }
   };
 
@@ -374,7 +375,7 @@ function MessagesContent() {
                   await updateGroupName(activeConversation.id, newGroupName.trim(), user.uid);
                   setIsEditingGroupName(false);
                 } catch (err: any) {
-                  alert(err.message);
+                  showAlert(err.message);
                 }
               };
 
@@ -448,7 +449,7 @@ function MessagesContent() {
                     targetIds.forEach(targetId => {
                       webrtcManagerRef.current?.requestSendFile(targetId, activeConversation.id, file);
                     });
-                    alert((lang === 'en' ? '⚠️ File request sent!\n\n🚨 IMPORTANT: Do NOT close or leave this page until the transfer is complete, otherwise it will be interrupted!' : '⚠️ 檔案傳送請求已發出！\n\n🚨 請注意：在對方接收完成前，【絕對不要】關閉或離開此畫面，否則傳輸將立刻中斷！'));
+                    showAlert((lang === 'en' ? '⚠️ File request sent!\n\n🚨 IMPORTANT: Do NOT close or leave this page until the transfer is complete, otherwise it will be interrupted!' : '⚠️ 檔案傳送請求已發出！\n\n🚨 請注意：在對方接收完成前，【絕對不要】關閉或離開此畫面，否則傳輸將立刻中斷！'));
                   }
                 }
               }}
@@ -538,7 +539,7 @@ function MessagesContent() {
                       targetIds.forEach(targetId => {
                         webrtcManagerRef.current?.requestSendFile(targetId, activeConversation.id, file);
                       });
-                      alert((lang === 'en' ? '⚠️ File request sent!\n\n🚨 IMPORTANT: Do NOT close or leave this page until the transfer is complete, otherwise it will be interrupted!' : '⚠️ 檔案傳送請求已發出！\n\n🚨 請注意：在對方接收完成前，【絕對不要】關閉或離開此畫面，否則傳輸將立刻中斷！'));
+                      showAlert((lang === 'en' ? '⚠️ File request sent!\n\n🚨 IMPORTANT: Do NOT close or leave this page until the transfer is complete, otherwise it will be interrupted!' : '⚠️ 檔案傳送請求已發出！\n\n🚨 請注意：在對方接收完成前，【絕對不要】關閉或離開此畫面，否則傳輸將立刻中斷！'));
                     }
                     e.target.value = '';
                   }} />
@@ -668,7 +669,7 @@ function MessagesContent() {
                               try {
                                 await updateGroupMemberNickname(activeConversation.id, memberId, editingMemberNickname, user.uid);
                                 setEditingMemberId(null);
-                              } catch (e: any) { alert(e.message); }
+                              } catch (e: any) { showAlert(e.message); }
                             }} style={{ color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer' }}><Check size={16} /></button>
                             <button onClick={() => setEditingMemberId(null)} style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}><X size={16} /></button>
                           </div>
@@ -680,10 +681,10 @@ function MessagesContent() {
 
                         {!isAdmin && (
                           <button onClick={async () => {
-                            if (confirm(lang === 'en' ? 'Remove member from group?' : '確定要踢出此成員？')) {
+                            if (await showConfirm(lang === 'en' ? 'Remove member from group?' : '確定要踢出此成員？')) {
                               try {
                                 await removeGroupParticipant(activeConversation.id, memberId, user.uid);
-                              } catch (e: any) { alert(e.message); }
+                              } catch (e: any) { showAlert(e.message); }
                             }
                           }} title={lang === 'en' ? 'Remove Member' : '踢出群組'} style={{ color: 'var(--danger, #ef4444)', background: 'none', border: 'none', cursor: 'pointer' }}>
                             <UserMinus size={16} />
@@ -742,7 +743,7 @@ function MessagesContent() {
                           });
                           await addGroupParticipants(activeConversation.id, addMemberFriendIds, profiles, user.uid);
                           setAddMemberFriendIds([]);
-                        } catch (e: any) { alert(e.message); }
+                        } catch (e: any) { showAlert(e.message); }
                       }} 
                       className="btn-primary" 
                       style={{ marginTop: '10px', width: '100%', fontSize: '0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}

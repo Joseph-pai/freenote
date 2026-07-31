@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useAuthStore } from '../../stores/authStore';
 import { updateUserProfile } from '../../lib/firebase/auth';
 import { useTranslation } from '../../lib/i18n';
+import { showAlert } from '../../stores/dialogStore';
 import { Settings, X } from 'lucide-react';
 import { AppUser } from '../../types';
 
@@ -25,7 +26,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
       await updateUserProfile(user.uid, { theme, language });
       onClose();
     } catch (err: any) {
-      alert(t('common.saveFailed') + ': ' + err.message);
+      showAlert(t('common.saveFailed') + ': ' + err.message);
     } finally {
       setSaving(false);
     }

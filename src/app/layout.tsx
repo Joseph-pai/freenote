@@ -2,6 +2,7 @@ import React from 'react';
 import './globals.css';
 import './responsive.css';
 import AuthProvider from '../components/auth/AuthProvider';
+import { ConfirmDialog } from '../components/shared/ConfirmDialog';
 
 import type { Metadata, Viewport } from 'next';
 
@@ -33,6 +34,7 @@ export default function RootLayout({
       <body>
         <AuthProvider>
           {children}
+          <ConfirmDialog />
         </AuthProvider>
       </body>
     </html>

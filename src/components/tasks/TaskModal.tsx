@@ -4,6 +4,7 @@ import { Task, Priority } from '../../types';
 import { createTask, updateTask, deleteTask } from '../../lib/firebase/tasks';
 import { useAuthStore } from '../../stores/authStore';
 import { useTranslation } from '../../lib/i18n';
+import { showConfirm } from '../../stores/dialogStore';
 
 interface TaskModalProps {
   task?: Task | null;
@@ -58,7 +59,7 @@ export function TaskModal({ task, onClose }: TaskModalProps) {
   };
 
   const handleDelete = async () => {
-    if (!task || !confirm(t('tasks.deleteConfirm'))) return;
+    if (!task || !await showConfirm(t('tasks.deleteConfirm'))) return;
     await deleteTask(task.id);
     onClose();
   };

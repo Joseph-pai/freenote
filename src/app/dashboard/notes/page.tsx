@@ -10,6 +10,7 @@ import { NoteProvider } from '../../../components/notes/NoteProvider';
 import { ShareModal } from '../../../components/shared/ShareModal';
 import { Plus, Pin, PinOff, Trash2, Eye, Pencil, Search, Users, ArrowLeft } from 'lucide-react';
 import { useTranslation } from '../../../lib/i18n';
+import { showConfirm } from '../../../stores/dialogStore';
 
 // ── Auto-save hook ──────────────────────────────────────────
 function useAutoSave(noteId: string | null, title: string, content: string, defaultTitle: string) {
@@ -150,7 +151,7 @@ export default function NotesPage() {
   };
 
   const handleDelete = async () => {
-    if (!activeNote || !confirm(t('notes.deleteConfirm'))) return;
+    if (!activeNote || !await showConfirm(t('notes.deleteConfirm'))) return;
     await deleteNote(activeNote.id);
     setActiveNoteId(null);
   };

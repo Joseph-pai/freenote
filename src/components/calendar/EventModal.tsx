@@ -4,6 +4,7 @@ import { CalendarEvent } from '../../types';
 import { createEvent, updateEvent, deleteEvent } from '../../lib/firebase/events';
 import { useAuthStore } from '../../stores/authStore';
 import { useTranslation } from '../../lib/i18n';
+import { showConfirm } from '../../stores/dialogStore';
 
 interface EventModalProps {
   event?: CalendarEvent | null;
@@ -61,7 +62,7 @@ export function EventModal({ event, defaultDate, onClose }: EventModalProps) {
   };
 
   const handleDelete = async () => {
-    if (!event || !confirm(t('event.deleteConfirm'))) return;
+    if (!event || !await showConfirm(t('event.deleteConfirm'))) return;
     await deleteEvent(event.id);
     onClose();
   };

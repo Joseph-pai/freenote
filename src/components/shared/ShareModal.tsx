@@ -4,6 +4,7 @@ import { useFriendStore } from '../../stores/friendStore';
 import { useAuthStore } from '../../stores/authStore';
 import { Users, X } from 'lucide-react';
 import { useTranslation } from '../../lib/i18n';
+import { showAlert } from '../../stores/dialogStore';
 
 interface ShareModalProps {
   itemId: string;
@@ -43,7 +44,7 @@ export function ShareModal({ itemId, itemType, currentSharedWith, onSave, onClos
       await onSave(shared, newSharedUserIds);
       onClose();
     } catch (err: any) {
-      alert(t('common.saveFailed') + ': ' + err.message);
+      showAlert(t('common.saveFailed') + ': ' + err.message);
       setLoading(false);
     }
   };

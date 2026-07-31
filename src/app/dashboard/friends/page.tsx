@@ -8,6 +8,7 @@ import { getOrCreateConversation } from '../../../lib/firebase/messages';
 import { InviteModal } from '../../../components/friends/InviteModal';
 import { UserPlus, UserCheck, UserX, UserMinus, MessageSquare, Edit2, Check, X } from 'lucide-react';
 import { useTranslation } from '../../../lib/i18n';
+import { showConfirm, showAlert } from '../../../stores/dialogStore';
 
 export default function FriendsPage() {
   const router = useRouter();
@@ -23,7 +24,7 @@ export default function FriendsPage() {
     try {
       await acceptFriendRequest(request);
     } catch (err: any) {
-      alert((lang === 'en' ? 'Accept failed: ' : '接受失敗: ') + err.message);
+      showAlert((lang === 'en' ? 'Accept failed: ' : '接受失敗: ') + err.message);
     }
   };
 
@@ -31,16 +32,16 @@ export default function FriendsPage() {
     try {
       await rejectFriendRequest(requestId);
     } catch (err: any) {
-      alert((lang === 'en' ? 'Reject failed: ' : '拒絕失敗: ') + err.message);
+      showAlert((lang === 'en' ? 'Reject failed: ' : '拒絕失敗: ') + err.message);
     }
   };
 
   const handleRemoveFriend = async (friendId: string) => {
-    if (!user || !confirm(t('friends.removeConfirm'))) return;
+    if (!user || !await showConfirm(t('friends.removeConfirm'))) return;
     try {
       await removeFriend(user.uid, friendId);
     } catch (err: any) {
-      alert((lang === 'en' ? 'Remove failed: ' : '刪除失敗: ') + err.message);
+      showAlert((lang === 'en' ? 'Remove failed: ' : '刪除失敗: ') + err.message);
     }
   };
 
@@ -54,7 +55,7 @@ export default function FriendsPage() {
       );
       router.push('/dashboard/messages');
     } catch (err: any) {
-      alert((lang === 'en' ? 'Failed to start chat: ' : '建立聊天失敗: ') + err.message);
+      showAlert((lang === 'en' ? 'Failed to start chat: ' : '建立聊天失敗: ') + err.message);
     } finally {
       setMessagingFriendId(null);
     }
@@ -71,7 +72,7 @@ export default function FriendsPage() {
       await updateFriendNickname(user.uid, friendId, tempNickname);
       setEditingNicknameId(null);
     } catch (err: any) {
-      alert((lang === 'en' ? 'Save nickname failed: ' : '儲存暱稱失敗: ') + err.message);
+      showAlert((lang === 'en' ? 'Save nickname failed: ' : '儲存暱稱失敗: ') + err.message);
     }
   };
 
