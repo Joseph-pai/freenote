@@ -5,7 +5,7 @@ import {
 import { db } from './config';
 import { CalendarEvent, SyncQueueItem } from '../../types';
 import { useCalendarStore } from '../../stores/calendarStore';
-import { idbPutEvent, idbGetAllEvents, idbEnqueue } from '../idb';
+import { idbPutEvent, idbGetAllEvents, idbGetEvent, idbEnqueue } from '../idb';
 
 export const subscribeToEvents = (userId: string) => {
   const { setEvents, setLoading } = useCalendarStore.getState();
@@ -27,10 +27,29 @@ export const subscribeToEvents = (userId: string) => {
   let sharedEvents: CalendarEvent[] = [];
 
   const updateStore = async () => {
+    const { events: currentEvents } = useCalendarStore.getState();
+
     const map = new Map<string, CalendarEvent>();
     ownedEvents.forEach(e => map.set(e.id, e));
     sharedEvents.forEach(e => map.set(e.id, e));
     
+    // ── Fix 1: Preserve pending local events ─────────────────────────────
+    currentEvents
+      .filter(e => e.id.startsWith('local_event_'))
+      .forEach(e => { if (!map.has(e.id)) map.set(e.id, e); });
+
+    // ── Fix 2: Respect locally-deleted events ────────────────────────────
+    const currentIds = new Set(currentEvents.map(e => e.id));
+    const restoredByFirestore = [...map.values()].filter(
+      e => !e.id.startsWith('local_event_') && !currentIds.has(e.id)
+    );
+    for (const event of restoredByFirestore) {
+      const idbEvent = await idbGetEvent(event.id);
+      if (idbEvent?.deletedAt) {
+        map.delete(event.id);
+      }
+    }
+
     const all = Array.from(map.values()).sort((a, b) => a.startDate - b.startDate);
     setEvents(all);
     for (const ev of all) {

@@ -110,6 +110,16 @@ export const idbDeleteNote = async (id: string) => {
 };
 
 // --- Events ---
+export const idbGetEvent = async (id: string) => {
+  try {
+    const db = await getDB();
+    return db.get('events', id) as Promise<any | undefined>;
+  } catch (err) {
+    console.warn('IDB getEvent failed:', err);
+    return undefined;
+  }
+};
+
 export const idbGetAllEvents = async (userId: string) => {
   try {
     const db = await getDB();
