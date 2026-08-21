@@ -60,6 +60,12 @@ export default function CalendarPage() {
         d += 86400000; // +1 day
       }
     }
+    
+    // Sort events in each day by createdAt descending (newest first)
+    for (const key in map) {
+      map[key].sort((a, b) => b.createdAt - a.createdAt);
+    }
+    
     return map;
   }, [events]);
 
